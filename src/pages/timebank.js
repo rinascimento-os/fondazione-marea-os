@@ -9,53 +9,68 @@ let filterProject = ''
 export function renderTimebank() {
   return `
     <div>
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div class="flex flex-wrap gap-2">
-          <select id="tb-filter-pioniere" class="px-3 py-2 rounded-lg border border-marea-border bg-white text-sm">
+          <select id="tb-filter-pioniere" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
             <option value="">Tutti i Pionieri</option>
           </select>
-          <select id="tb-filter-project" class="px-3 py-2 rounded-lg border border-marea-border bg-white text-sm">
+          <select id="tb-filter-project" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
             <option value="">Tutti i progetti</option>
           </select>
         </div>
-        <button id="log-hours-btn" class="inline-flex items-center gap-2 bg-marea-teal text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-marea-dark transition-colors">
+        <button id="log-hours-btn" class="btn-gold">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Registra ore
         </button>
       </div>
 
       <!-- Summary stats -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div class="bg-white rounded-xl border border-marea-border p-4">
-          <p class="text-sm text-marea-gray">Ore totali</p>
-          <p id="tb-total-hours" class="text-2xl font-bold text-marea-black">—</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-medium text-marea-gray">Ore totali</p>
+            <span class="w-9 h-9 rounded-xl bg-marea-teal-light flex items-center justify-center">
+              <svg class="w-4 h-4 text-marea-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </span>
+          </div>
+          <p id="tb-total-hours" class="text-3xl font-bold text-marea-black">—</p>
         </div>
-        <div class="bg-white rounded-xl border border-marea-border p-4">
-          <p class="text-sm text-marea-gray">Pionieri attivi</p>
-          <p id="tb-active-pionieri" class="text-2xl font-bold text-marea-black">—</p>
+        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-medium text-marea-gray">Pionieri attivi</p>
+            <span class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
+              <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </span>
+          </div>
+          <p id="tb-active-pionieri" class="text-3xl font-bold text-marea-black">—</p>
         </div>
-        <div class="bg-white rounded-xl border border-marea-border p-4">
-          <p class="text-sm text-marea-gray">Progetti serviti</p>
-          <p id="tb-projects-served" class="text-2xl font-bold text-marea-black">—</p>
+        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-sm font-medium text-marea-gray">Progetti serviti</p>
+            <span class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            </span>
+          </div>
+          <p id="tb-projects-served" class="text-3xl font-bold text-marea-black">—</p>
         </div>
       </div>
 
       <!-- Ledger -->
-      <div class="bg-white rounded-xl border border-marea-border overflow-hidden">
+      <div class="bg-white rounded-2xl border border-marea-border/60 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="bg-marea-cream border-b border-marea-border">
-              <tr>
-                <th class="text-left px-4 py-3 font-medium text-marea-gray">Data</th>
-                <th class="text-left px-4 py-3 font-medium text-marea-gray">Pioniere</th>
-                <th class="text-left px-4 py-3 font-medium text-marea-gray">Progetto</th>
-                <th class="text-left px-4 py-3 font-medium text-marea-gray">Ore</th>
-                <th class="text-left px-4 py-3 font-medium text-marea-gray">Descrizione</th>
-                <th class="text-left px-4 py-3 font-medium text-marea-gray"></th>
+            <thead>
+              <tr class="border-b border-marea-border/60">
+                <th class="text-left px-5 py-4 font-medium text-marea-gray text-xs uppercase tracking-wider">Data</th>
+                <th class="text-left px-5 py-4 font-medium text-marea-gray text-xs uppercase tracking-wider">Pioniere</th>
+                <th class="text-left px-5 py-4 font-medium text-marea-gray text-xs uppercase tracking-wider">Progetto</th>
+                <th class="text-left px-5 py-4 font-medium text-marea-gray text-xs uppercase tracking-wider">Ore</th>
+                <th class="text-left px-5 py-4 font-medium text-marea-gray text-xs uppercase tracking-wider">Descrizione</th>
+                <th class="text-left px-5 py-4 font-medium text-marea-gray text-xs uppercase tracking-wider"></th>
               </tr>
             </thead>
             <tbody id="tb-entries">
-              <tr><td colspan="6" class="px-4 py-8 text-center text-marea-gray">Caricamento...</td></tr>
+              <tr><td colspan="6" class="px-5 py-12 text-center text-marea-gray text-sm">Caricamento...</td></tr>
             </tbody>
           </table>
         </div>
@@ -145,19 +160,25 @@ function renderEntries() {
   if (filterProject) filtered = filtered.filter(e => e.match?.need?.project?.id === filterProject)
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-marea-gray">Nessuna registrazione trovata. Clicca "Registra ore" per iniziare.</td></tr>'
+    tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-12 text-center">
+      <svg class="w-10 h-10 text-marea-border mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <p class="text-sm text-marea-gray">Nessuna registrazione trovata.</p>
+      <p class="text-xs text-marea-gray/60 mt-1">Clicca "Registra ore" per iniziare.</p>
+    </td></tr>`
     return
   }
 
   tbody.innerHTML = filtered.map(e => `
-    <tr class="border-b border-marea-border last:border-0 hover:bg-marea-cream/50">
-      <td class="px-4 py-3 whitespace-nowrap">${formatDate(e.date)}</td>
-      <td class="px-4 py-3 font-medium">${e.match?.pioniere?.full_name || '—'}</td>
-      <td class="px-4 py-3">${e.match?.need?.project?.name || '—'}</td>
-      <td class="px-4 py-3 font-medium text-marea-teal">${e.hours}h</td>
-      <td class="px-4 py-3 text-marea-gray max-w-xs truncate">${e.description || '—'}</td>
-      <td class="px-4 py-3">
-        <button class="entry-delete text-marea-gray hover:text-red-600" data-entry-id="${e.id}">
+    <tr class="border-b border-marea-border/40 last:border-0 table-row-hover transition-colors">
+      <td class="px-5 py-4 whitespace-nowrap text-marea-gray">${formatDate(e.date)}</td>
+      <td class="px-5 py-4 font-medium text-marea-black">${e.match?.pioniere?.full_name || '—'}</td>
+      <td class="px-5 py-4 text-marea-gray">${e.match?.need?.project?.name || '—'}</td>
+      <td class="px-5 py-4">
+        <span class="badge bg-marea-teal-light text-marea-teal font-semibold">${e.hours}h</span>
+      </td>
+      <td class="px-5 py-4 text-marea-gray max-w-xs truncate">${e.description || '—'}</td>
+      <td class="px-5 py-4">
+        <button class="entry-delete text-marea-gray hover:text-red-500 transition-colors" data-entry-id="${e.id}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </button>
       </td>
@@ -179,37 +200,37 @@ function renderEntries() {
 
 function openLogHoursForm() {
   const content = `
-    <form id="log-hours-form" class="space-y-4">
+    <form id="log-hours-form" class="space-y-5">
       <div>
-        <label class="block text-sm font-medium text-marea-black mb-1">Abbinamento *</label>
-        <select name="match_id" required class="w-full px-3 py-2 rounded-lg border border-marea-border text-sm focus:outline-none focus:ring-2 focus:ring-marea-teal/30">
+        <label class="block text-sm font-medium text-marea-black mb-1.5">Abbinamento *</label>
+        <select name="match_id" required class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
           <option value="">Seleziona...</option>
           ${allMatches.map(m => `
             <option value="${m.id}">${m.pioniere?.full_name || '—'} → ${m.need?.project?.name || '—'}</option>
           `).join('')}
         </select>
-        ${allMatches.length === 0 ? '<p class="text-xs text-marea-gray mt-1">Nessun abbinamento confermato/attivo. Crea e conferma abbinamenti nella sezione Matching.</p>' : ''}
+        ${allMatches.length === 0 ? '<p class="text-xs text-marea-gray/60 mt-1.5">Nessun abbinamento confermato/attivo. Crea e conferma abbinamenti nella sezione Matching.</p>' : ''}
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-marea-black mb-1">Ore *</label>
+          <label class="block text-sm font-medium text-marea-black mb-1.5">Ore *</label>
           <input type="number" name="hours" required min="0.5" step="0.5" placeholder="es. 2"
-                 class="w-full px-3 py-2 rounded-lg border border-marea-border text-sm focus:outline-none focus:ring-2 focus:ring-marea-teal/30" />
+                 class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-marea-black mb-1">Data *</label>
+          <label class="block text-sm font-medium text-marea-black mb-1.5">Data *</label>
           <input type="date" name="date" required value="${new Date().toISOString().split('T')[0]}"
-                 class="w-full px-3 py-2 rounded-lg border border-marea-border text-sm focus:outline-none focus:ring-2 focus:ring-marea-teal/30" />
+                 class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
         </div>
       </div>
       <div>
-        <label class="block text-sm font-medium text-marea-black mb-1">Descrizione</label>
-        <textarea name="description" rows="2" placeholder="Che attività è stata svolta?"
-                  class="w-full px-3 py-2 rounded-lg border border-marea-border text-sm focus:outline-none focus:ring-2 focus:ring-marea-teal/30"></textarea>
+        <label class="block text-sm font-medium text-marea-black mb-1.5">Descrizione</label>
+        <textarea name="description" rows="2" placeholder="Che attivit&agrave; &egrave; stata svolta?"
+                  class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"></textarea>
       </div>
-      <div class="flex justify-end gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="px-4 py-2 rounded-lg text-sm font-medium text-marea-gray hover:bg-gray-100">Annulla</button>
-        <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-marea-teal text-white hover:bg-marea-dark transition-colors">Registra</button>
+      <div class="flex justify-end gap-3 pt-3 border-t border-marea-border/60">
+        <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
+        <button type="submit" class="btn-gold py-2 px-5">Registra ore</button>
       </div>
     </form>
   `

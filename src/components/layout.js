@@ -37,24 +37,31 @@ export function renderLayout(contentHtml, currentHash) {
       <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" onclick="document.getElementById('sidebar').classList.add('-translate-x-full');this.classList.add('hidden')"></div>
 
       <!-- Sidebar -->
-      <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-marea-dark text-white flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
-        <div class="p-5 border-b border-white/10">
+      <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-marea-navy text-white flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+        <!-- Logo area -->
+        <div class="px-6 py-6 border-b border-white/10">
           <img src="/brand_assets/logo/Fondazione_Marea_Logo_H_W.svg" alt="Fondazione Marea" class="h-8" />
+          <p class="text-xs text-white/40 mt-2 tracking-wide uppercase">Banca del Tempo</p>
         </div>
 
-        <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          ${navItems.map(item => `
-            <a href="${item.hash}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      ${currentHash.startsWith(item.hash) ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}">
-              ${item.icon()}
-              ${item.label}
-            </a>
-          `).join('')}
+        <!-- Navigation -->
+        <nav class="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+          ${navItems.map(item => {
+            const isActive = currentHash.startsWith(item.hash)
+            return `
+              <a href="${item.hash}"
+                 class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                        ${isActive ? 'nav-active' : 'text-white/60 hover:bg-white/8 hover:text-white'}">
+                ${item.icon()}
+                ${item.label}
+              </a>
+            `
+          }).join('')}
         </nav>
 
+        <!-- Footer -->
         <div class="p-3 border-t border-white/10">
-          <button id="logout-btn" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white w-full transition-colors">
+          <button id="logout-btn" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/50 hover:bg-white/8 hover:text-white w-full transition-all duration-150">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Esci
           </button>
@@ -63,15 +70,15 @@ export function renderLayout(contentHtml, currentHash) {
 
       <!-- Main content -->
       <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="bg-white border-b border-marea-border px-4 lg:px-8 py-4 flex items-center gap-4">
-          <button id="menu-btn" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-overlay').classList.remove('hidden')">
+        <header class="bg-white/80 backdrop-blur-sm border-b border-marea-border px-4 lg:px-8 py-5 flex items-center gap-4 sticky top-0 z-10">
+          <button id="menu-btn" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-overlay').classList.remove('hidden')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
-          <h1 class="text-xl font-bold text-marea-black">${activeItem.label}</h1>
+          <h1 class="text-2xl font-bold text-marea-black">${activeItem.label}</h1>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 lg:p-8">
-          <div class="page-transition">
+          <div class="page-transition max-w-7xl mx-auto">
             ${contentHtml}
           </div>
         </div>

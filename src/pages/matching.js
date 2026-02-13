@@ -9,38 +9,43 @@ let selectedNeed = null
 export function renderMatching() {
   return `
     <div>
-      <div class="flex flex-wrap gap-2 mb-6">
-        <button class="match-tab px-4 py-2 rounded-lg text-sm font-medium bg-marea-teal text-white" data-tab="create">Crea abbinamento</button>
-        <button class="match-tab px-4 py-2 rounded-lg text-sm font-medium bg-white text-marea-black border border-marea-border hover:bg-marea-light" data-tab="manage">Gestisci abbinamenti</button>
+      <!-- Tabs -->
+      <div class="flex gap-1 mb-8 bg-marea-warm-gray rounded-xl p-1 w-fit">
+        <button class="match-tab px-5 py-2.5 rounded-lg text-sm font-medium transition-all bg-white text-marea-black shadow-sm" data-tab="create">Crea abbinamento</button>
+        <button class="match-tab px-5 py-2.5 rounded-lg text-sm font-medium transition-all text-marea-gray hover:text-marea-black" data-tab="manage">Gestisci abbinamenti</button>
       </div>
 
       <div id="match-create-view">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <!-- Left: Open needs -->
           <div>
-            <h2 class="font-bold text-marea-black mb-3">Esigenze aperte</h2>
-            <div id="open-needs-list" class="space-y-2">
+            <h2 class="text-lg text-marea-black mb-4">Esigenze aperte</h2>
+            <div id="open-needs-list" class="space-y-3">
               <p class="text-sm text-marea-gray">Caricamento...</p>
             </div>
           </div>
 
           <!-- Right: Available Pionieri -->
           <div>
-            <h2 class="font-bold text-marea-black mb-3">Pionieri disponibili</h2>
-            <div id="matching-filter-info" class="text-sm text-marea-gray mb-3 hidden">
-              Filtrati per competenza: <span id="filter-skill-name" class="font-medium text-marea-teal"></span>
-              <button id="clear-filter" class="ml-2 text-xs text-red-500 hover:text-red-700">Rimuovi filtro</button>
+            <h2 class="text-lg text-marea-black mb-4">Pionieri disponibili</h2>
+            <div id="matching-filter-info" class="text-sm text-marea-gray mb-4 hidden flex items-center gap-2">
+              <span>Filtrati per:</span>
+              <span id="filter-skill-name" class="badge bg-marea-teal-light text-marea-teal"></span>
+              <button id="clear-filter" class="text-xs text-red-500 hover:text-red-700 transition-colors">Rimuovi</button>
             </div>
-            <div id="available-pionieri-list" class="space-y-2">
-              <p class="text-sm text-marea-gray">Seleziona un'esigenza per vedere i Pionieri compatibili.</p>
+            <div id="available-pionieri-list" class="space-y-3">
+              <div class="text-center py-12">
+                <svg class="w-10 h-10 text-marea-border mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                <p class="text-sm text-marea-gray">Seleziona un'esigenza per vedere i Pionieri compatibili.</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div id="match-manage-view" class="hidden">
-        <div class="flex flex-wrap gap-2 mb-4">
-          <select id="match-status-filter" class="px-3 py-2 rounded-lg border border-marea-border bg-white text-sm">
+        <div class="flex flex-wrap gap-2 mb-6">
+          <select id="match-status-filter" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
             <option value="">Tutti gli stati</option>
             <option value="proposed">Proposto</option>
             <option value="confirmed">Confermato</option>
@@ -63,11 +68,11 @@ export async function initMatching() {
   document.querySelectorAll('.match-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.match-tab').forEach(t => {
-        t.classList.remove('bg-marea-teal', 'text-white')
-        t.classList.add('bg-white', 'text-marea-black', 'border', 'border-marea-border')
+        t.classList.remove('bg-white', 'text-marea-black', 'shadow-sm')
+        t.classList.add('text-marea-gray')
       })
-      tab.classList.remove('bg-white', 'text-marea-black', 'border', 'border-marea-border')
-      tab.classList.add('bg-marea-teal', 'text-white')
+      tab.classList.remove('text-marea-gray')
+      tab.classList.add('bg-white', 'text-marea-black', 'shadow-sm')
 
       const createView = document.getElementById('match-create-view')
       const manageView = document.getElementById('match-manage-view')
@@ -86,7 +91,6 @@ export async function initMatching() {
     selectedNeed = null
     renderPionieriList()
     document.getElementById('matching-filter-info')?.classList.add('hidden')
-    // Deselect need cards
     document.querySelectorAll('.need-card').forEach(c => c.classList.remove('ring-2', 'ring-marea-teal'))
   })
 }
@@ -138,19 +142,27 @@ function renderNeedsList() {
   if (!container) return
 
   if (openNeeds.length === 0) {
-    container.innerHTML = '<p class="text-sm text-marea-gray">Nessuna esigenza aperta. Crea esigenze nella sezione Progetti.</p>'
+    container.innerHTML = `
+      <div class="text-center py-12">
+        <p class="text-sm text-marea-gray">Nessuna esigenza aperta.</p>
+        <p class="text-xs text-marea-gray/60 mt-1">Crea esigenze nella sezione Progetti.</p>
+      </div>
+    `
     return
   }
 
   container.innerHTML = openNeeds.map(n => `
-    <div class="need-card bg-white rounded-lg border border-marea-border p-4 cursor-pointer hover:shadow-sm transition-all ${selectedNeed?.id === n.id ? 'ring-2 ring-marea-teal' : ''}" data-need-id="${n.id}">
-      <div class="flex items-start justify-between gap-2">
-        <div>
-          <p class="font-medium text-sm text-marea-black">${n.project?.name || '—'}</p>
-          <p class="text-xs text-marea-gray mt-0.5">${n.skill?.name || '—'} · ${n.hours_needed ? n.hours_needed + ' ore' : '—'}</p>
-          ${n.description ? `<p class="text-xs text-marea-gray mt-1">${n.description}</p>` : ''}
+    <div class="need-card bg-white rounded-xl border border-marea-border/60 p-5 cursor-pointer card-hover ${selectedNeed?.id === n.id ? 'ring-2 ring-marea-teal border-marea-teal' : ''}" data-need-id="${n.id}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex-1">
+          <p class="font-semibold text-sm text-marea-black">${n.project?.name || '—'}</p>
+          <div class="flex items-center gap-2 mt-1.5">
+            <span class="badge bg-marea-teal-light text-marea-teal">${n.skill?.name || '—'}</span>
+            ${n.hours_needed ? `<span class="text-xs text-marea-gray">${n.hours_needed} ore</span>` : ''}
+          </div>
+          ${n.description ? `<p class="text-xs text-marea-gray mt-2 leading-relaxed">${n.description}</p>` : ''}
         </div>
-        <span class="px-1.5 py-0.5 rounded text-xs font-medium ${urgencyBadge(n.urgency)}">${urgencyLabel(n.urgency)}</span>
+        <span class="badge ${urgencyBadge(n.urgency)}">${urgencyLabel(n.urgency)}</span>
       </div>
     </div>
   `).join('')
@@ -158,9 +170,8 @@ function renderNeedsList() {
   container.querySelectorAll('.need-card').forEach(card => {
     card.addEventListener('click', () => {
       selectedNeed = openNeeds.find(n => n.id === card.dataset.needId)
-      // Highlight
-      container.querySelectorAll('.need-card').forEach(c => c.classList.remove('ring-2', 'ring-marea-teal'))
-      card.classList.add('ring-2', 'ring-marea-teal')
+      container.querySelectorAll('.need-card').forEach(c => c.classList.remove('ring-2', 'ring-marea-teal', 'border-marea-teal'))
+      card.classList.add('ring-2', 'ring-marea-teal', 'border-marea-teal')
       renderPionieriList()
     })
   })
@@ -173,12 +184,16 @@ function renderPionieriList() {
   if (!container) return
 
   if (!selectedNeed) {
-    container.innerHTML = '<p class="text-sm text-marea-gray">Seleziona un\'esigenza per vedere i Pionieri compatibili.</p>'
+    container.innerHTML = `
+      <div class="text-center py-12">
+        <svg class="w-10 h-10 text-marea-border mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+        <p class="text-sm text-marea-gray">Seleziona un'esigenza per vedere i Pionieri compatibili.</p>
+      </div>
+    `
     filterInfo?.classList.add('hidden')
     return
   }
 
-  // Filter pionieri by matching skill
   const skillId = selectedNeed.skill_id
   const matching = pionieri.filter(p =>
     p.pioniere_skills?.some(ps => ps.skill_id === skillId)
@@ -198,18 +213,23 @@ function renderPionieriList() {
   }
 
   const renderPioniere = (p, isMatch) => `
-    <div class="bg-white rounded-lg border ${isMatch ? 'border-marea-teal' : 'border-marea-border'} p-4 cursor-pointer hover:shadow-sm transition-all pioniere-match-card" data-pioniere-id="${p.id}">
-      <div class="flex items-start justify-between gap-2">
-        <div>
-          <p class="font-medium text-sm text-marea-black">${p.full_name}</p>
-          <p class="text-xs text-marea-gray">${p.location || ''} ${p.availability ? '· ' + p.availability : ''}</p>
-          <div class="flex flex-wrap gap-1 mt-1.5">
-            ${(p.pioniere_skills || []).map(ps => `
-              <span class="px-1.5 py-0.5 rounded-full text-xs ${ps.skill_id === skillId ? 'bg-marea-teal text-white font-medium' : 'bg-marea-teal-light text-marea-teal'}">${ps.skill?.name || ''}</span>
-            `).join('')}
+    <div class="bg-white rounded-xl border ${isMatch ? 'border-marea-teal/50 bg-marea-teal-light/20' : 'border-marea-border/60'} p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${p.id}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-full ${isMatch ? 'bg-marea-teal/10' : 'bg-marea-warm-gray'} flex items-center justify-center flex-shrink-0">
+            <span class="${isMatch ? 'text-marea-teal' : 'text-marea-gray'} font-bold text-xs">${getInitials(p.full_name)}</span>
+          </div>
+          <div>
+            <p class="font-semibold text-sm text-marea-black">${p.full_name}</p>
+            <p class="text-xs text-marea-gray mt-0.5">${p.location || ''} ${p.availability ? '· ' + p.availability : ''}</p>
+            <div class="flex flex-wrap gap-1 mt-2">
+              ${(p.pioniere_skills || []).map(ps => `
+                <span class="badge ${ps.skill_id === skillId ? 'bg-marea-teal text-white' : 'bg-marea-teal-light text-marea-teal'}">${ps.skill?.name || ''}</span>
+              `).join('')}
+            </div>
           </div>
         </div>
-        ${isMatch ? '<span class="text-xs font-medium text-marea-teal">Compatibile</span>' : ''}
+        ${isMatch ? '<span class="badge bg-marea-yellow text-marea-navy font-semibold">Compatibile</span>' : ''}
       </div>
     </div>
   `
@@ -227,30 +247,35 @@ function renderPionieriList() {
   })
 }
 
+function getInitials(name) {
+  if (!name) return '?'
+  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+}
+
 function openCreateMatchModal(pioniere, need) {
   const content = `
-    <div class="space-y-4">
+    <div class="space-y-5">
       <div class="grid grid-cols-2 gap-4">
-        <div class="p-3 rounded-lg bg-marea-light">
-          <p class="text-xs text-marea-gray mb-1">Pioniere</p>
-          <p class="font-medium text-sm">${pioniere.full_name}</p>
-          <p class="text-xs text-marea-gray">${pioniere.location || ''}</p>
+        <div class="p-4 rounded-xl bg-marea-teal-light/50 border border-marea-teal/10">
+          <p class="text-xs text-marea-gray mb-1.5 uppercase tracking-wide">Pioniere</p>
+          <p class="font-semibold text-sm text-marea-black">${pioniere.full_name}</p>
+          <p class="text-xs text-marea-gray mt-0.5">${pioniere.location || ''}</p>
         </div>
-        <div class="p-3 rounded-lg bg-marea-light">
-          <p class="text-xs text-marea-gray mb-1">Esigenza</p>
-          <p class="font-medium text-sm">${need.project?.name || ''}</p>
-          <p class="text-xs text-marea-gray">${need.skill?.name || ''} · ${need.hours_needed ? need.hours_needed + ' ore' : ''}</p>
+        <div class="p-4 rounded-xl bg-amber-50/50 border border-amber-200/30">
+          <p class="text-xs text-marea-gray mb-1.5 uppercase tracking-wide">Esigenza</p>
+          <p class="font-semibold text-sm text-marea-black">${need.project?.name || ''}</p>
+          <p class="text-xs text-marea-gray mt-0.5">${need.skill?.name || ''} · ${need.hours_needed ? need.hours_needed + ' ore' : ''}</p>
         </div>
       </div>
       <form id="create-match-form">
         <div>
-          <label class="block text-sm font-medium text-marea-black mb-1">Note</label>
+          <label class="block text-sm font-medium text-marea-black mb-1.5">Note</label>
           <textarea name="notes" rows="2" placeholder="Note opzionali sull'abbinamento..."
-                    class="w-full px-3 py-2 rounded-lg border border-marea-border text-sm focus:outline-none focus:ring-2 focus:ring-marea-teal/30"></textarea>
+                    class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="px-4 py-2 rounded-lg text-sm font-medium text-marea-gray hover:bg-gray-100">Annulla</button>
-          <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-marea-teal text-white hover:bg-marea-dark transition-colors">Crea abbinamento</button>
+          <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
+          <button type="submit" class="btn-gold py-2 px-5">Crea abbinamento</button>
         </div>
       </form>
     </div>
@@ -271,7 +296,6 @@ function openCreateMatchModal(pioniere, need) {
       })
       if (error) throw error
 
-      // Update need status
       await supabase.from('project_needs').update({ status: 'matched' }).eq('id', need.id)
 
       closeModal()
@@ -293,30 +317,37 @@ function renderMatchesList() {
   if (statusFilter) filtered = filtered.filter(m => m.status === statusFilter)
 
   if (filtered.length === 0) {
-    container.innerHTML = '<p class="text-sm text-marea-gray">Nessun abbinamento trovato.</p>'
+    container.innerHTML = `
+      <div class="text-center py-12">
+        <p class="text-sm text-marea-gray">Nessun abbinamento trovato.</p>
+      </div>
+    `
     return
   }
 
   container.innerHTML = filtered.map(m => `
-    <div class="bg-white rounded-xl border border-marea-border p-5 hover:shadow-sm transition-shadow">
+    <div class="bg-white rounded-2xl border border-marea-border/60 p-5 card-hover">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="font-medium text-marea-black">${m.pioniere?.full_name || '—'}</span>
-            <svg class="w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-            <span class="font-medium text-marea-black">${m.need?.project?.name || '—'}</span>
+          <div class="flex items-center gap-2 mb-1.5">
+            <div class="w-7 h-7 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
+              <span class="text-marea-teal font-bold text-[10px]">${getInitials(m.pioniere?.full_name)}</span>
+            </div>
+            <span class="font-semibold text-marea-black text-sm">${m.pioniere?.full_name || '—'}</span>
+            <svg class="w-4 h-4 text-marea-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            <span class="font-semibold text-marea-black text-sm">${m.need?.project?.name || '—'}</span>
           </div>
-          <p class="text-sm text-marea-gray">${m.need?.skill?.name || ''} ${m.need?.description ? '· ' + m.need.description : ''}</p>
-          ${m.notes ? `<p class="text-xs text-marea-gray mt-1 italic">${m.notes}</p>` : ''}
+          <p class="text-sm text-marea-gray ml-9">${m.need?.skill?.name || ''} ${m.need?.description ? '· ' + m.need.description : ''}</p>
+          ${m.notes ? `<p class="text-xs text-marea-gray/70 mt-1 ml-9 italic">${m.notes}</p>` : ''}
         </div>
-        <div class="flex items-center gap-2">
-          <select class="match-status-select px-2 py-1 rounded border border-marea-border text-xs focus:outline-none" data-match-id="${m.id}">
+        <div class="flex items-center gap-3 ml-9 sm:ml-0">
+          <select class="match-status-select px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${m.id}">
             <option value="proposed" ${m.status === 'proposed' ? 'selected' : ''}>Proposto</option>
             <option value="confirmed" ${m.status === 'confirmed' ? 'selected' : ''}>Confermato</option>
             <option value="active" ${m.status === 'active' ? 'selected' : ''}>Attivo</option>
             <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completato</option>
           </select>
-          <button class="match-delete text-marea-gray hover:text-red-600" data-match-id="${m.id}">
+          <button class="match-delete text-marea-gray hover:text-red-500 transition-colors" data-match-id="${m.id}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
         </div>
@@ -329,7 +360,6 @@ function renderMatchesList() {
       try {
         await supabase.from('matches').update({ status: select.value }).eq('id', select.dataset.matchId)
 
-        // If completed, mark need as fulfilled
         if (select.value === 'completed') {
           const match = allMatches.find(m => m.id === select.dataset.matchId)
           if (match?.need?.id) {
@@ -348,7 +378,6 @@ function renderMatchesList() {
     btn.addEventListener('click', async () => {
       if (!confirm('Eliminare questo abbinamento?')) return
       try {
-        // Reset need status to open
         const match = allMatches.find(m => m.id === btn.dataset.matchId)
         if (match?.need?.id) {
           await supabase.from('project_needs').update({ status: 'open' }).eq('id', match.need.id)
@@ -363,7 +392,7 @@ function renderMatchesList() {
 }
 
 function urgencyBadge(u) {
-  return { high: 'bg-red-100 text-red-800', medium: 'bg-yellow-100 text-yellow-800', low: 'bg-green-100 text-green-800' }[u] || 'bg-gray-100 text-gray-800'
+  return { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-emerald-100 text-emerald-700' }[u] || 'bg-gray-100 text-gray-600'
 }
 function urgencyLabel(u) {
   return { high: 'Alta', medium: 'Media', low: 'Bassa' }[u] || u

@@ -19,9 +19,9 @@ export function renderSkillPicker({ selectedSkills = [], inputId = 'skill-picker
       </div>
       <div class="relative">
         <input type="text" id="${inputId}-input"
-               class="w-full px-3 py-2 rounded-lg border border-marea-border text-sm focus:outline-none focus:ring-2 focus:ring-marea-teal/30 focus:border-marea-teal"
+               class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"
                placeholder="Cerca o aggiungi competenza..." autocomplete="off" />
-        <div id="${inputId}-dropdown" class="absolute left-0 right-0 top-full mt-1 bg-white border border-marea-border rounded-lg shadow-lg max-h-48 overflow-y-auto z-10 hidden"></div>
+        <div id="${inputId}-dropdown" class="absolute left-0 right-0 top-full mt-1 bg-white border border-marea-border/60 rounded-xl shadow-lg max-h-48 overflow-y-auto z-10 hidden"></div>
       </div>
       <input type="hidden" id="${inputId}-values" value='${JSON.stringify(selectedSkills.map(s => s.id))}' />
     </div>
