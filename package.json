@@ -23,6 +23,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
     "@tailwindcss/vite": "^4.1.18",
+    "chart.js": "^4.5.1",
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.1"
   }
