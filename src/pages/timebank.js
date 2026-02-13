@@ -1,8 +1,11 @@
 import { supabase } from '../supabase.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
+import { renderSearchableSelect, initSearchableSelect } from '../components/searchable-select.js'
 
 let allEntries = []
 let allMatches = []
+let allPionieri = []
+let allProjects = []
 let filterPioniere = ''
 let filterProject = ''
 
@@ -80,18 +83,40 @@ export function renderTimebank() {
 }
 
 export async function initTimebank() {
-  await Promise.all([loadEntries(), loadMatchesForForm()])
+  await Promise.all([loadEntries(), loadFormData()])
 
   document.getElementById('log-hours-btn')?.addEventListener('click', () => openLogHoursForm())
   document.getElementById('tb-filter-pioniere')?.addEventListener('change', (e) => { filterPioniere = e.target.value; renderEntries() })
   document.getElementById('tb-filter-project')?.addEventListener('change', (e) => { filterProject = e.target.value; renderEntries() })
 }
 
+async function loadFormData() {
+  const [matchesRes, pionieriRes, projectsRes] = await Promise.all([
+    supabase
+      .from('matches')
+      .select('id, status, pioniere:pionieri(id, full_name), need:project_needs(id, description, project:projects(id, name))')
+      .in('status', ['confirmed', 'active'])
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('pionieri')
+      .select('id, full_name, location')
+      .order('full_name'),
+    supabase
+      .from('projects')
+      .select('id, name, type, status')
+      .order('name'),
+  ])
+
+  allMatches = matchesRes.data || []
+  allPionieri = pionieriRes.data || []
+  allProjects = projectsRes.data || []
+}
+
 async function loadEntries() {
   try {
     const { data } = await supabase
       .from('time_entries')
-      .select('*, match:matches(id, pioniere:pionieri(id, full_name), need:project_needs(id, project:projects(id, name)))')
+      .select('*, match:matches(id, pioniere:pionieri(id, full_name), need:project_needs(id, project:projects(id, name))), pioniere:pionieri(id, full_name), project:projects(id, name)')
       .order('date', { ascending: false })
 
     allEntries = data || []
@@ -104,18 +129,13 @@ async function loadEntries() {
   renderStats()
 }
 
-async function loadMatchesForForm() {
-  try {
-    const { data } = await supabase
-      .from('matches')
-      .select('id, status, pioniere:pionieri(full_name), need:project_needs(description, project:projects(name))')
-      .in('status', ['confirmed', 'active'])
-      .order('created_at', { ascending: false })
+// Helper: get pioniere info from an entry (match-based or direct)
+function entryPioniere(e) {
+  return e.match?.pioniere || e.pioniere || null
+}
 
-    allMatches = data || []
-  } catch {
-    allMatches = []
-  }
+function entryProject(e) {
+  return e.match?.need?.project || e.project || null
 }
 
 function populateFilters() {
@@ -127,8 +147,8 @@ function populateFilters() {
   const projects = new Map()
 
   allEntries.forEach(e => {
-    const p = e.match?.pioniere
-    const proj = e.match?.need?.project
+    const p = entryPioniere(e)
+    const proj = entryProject(e)
     if (p) pionieri.set(p.id, p.full_name)
     if (proj) projects.set(proj.id, proj.name)
   })
@@ -142,8 +162,8 @@ function populateFilters() {
 
 function renderStats() {
   const totalHours = allEntries.reduce((sum, e) => sum + (parseFloat(e.hours) || 0), 0)
-  const activePionieri = new Set(allEntries.map(e => e.match?.pioniere?.id).filter(Boolean)).size
-  const projectsServed = new Set(allEntries.map(e => e.match?.need?.project?.id).filter(Boolean)).size
+  const activePionieri = new Set(allEntries.map(e => entryPioniere(e)?.id).filter(Boolean)).size
+  const projectsServed = new Set(allEntries.map(e => entryProject(e)?.id).filter(Boolean)).size
 
   const el = (id) => document.getElementById(id)
   if (el('tb-total-hours')) el('tb-total-hours').textContent = totalHours > 0 ? totalHours.toFixed(1) : '0'
@@ -156,8 +176,8 @@ function renderEntries() {
   if (!tbody) return
 
   let filtered = allEntries
-  if (filterPioniere) filtered = filtered.filter(e => e.match?.pioniere?.id === filterPioniere)
-  if (filterProject) filtered = filtered.filter(e => e.match?.need?.project?.id === filterProject)
+  if (filterPioniere) filtered = filtered.filter(e => entryPioniere(e)?.id === filterPioniere)
+  if (filterProject) filtered = filtered.filter(e => entryProject(e)?.id === filterProject)
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-12 text-center">
@@ -168,11 +188,18 @@ function renderEntries() {
     return
   }
 
-  tbody.innerHTML = filtered.map(e => `
+  tbody.innerHTML = filtered.map(e => {
+    const pioniere = entryPioniere(e)
+    const project = entryProject(e)
+    const isDirectEntry = !e.match_id
+    return `
     <tr class="border-b border-marea-border/40 last:border-0 table-row-hover transition-colors">
       <td class="px-5 py-4 whitespace-nowrap text-marea-gray">${formatDate(e.date)}</td>
-      <td class="px-5 py-4 font-medium text-marea-black">${e.match?.pioniere?.full_name || '—'}</td>
-      <td class="px-5 py-4 text-marea-gray">${e.match?.need?.project?.name || '—'}</td>
+      <td class="px-5 py-4 font-medium text-marea-black">${pioniere?.full_name || '—'}</td>
+      <td class="px-5 py-4 text-marea-gray">
+        ${project?.name || '—'}
+        ${isDirectEntry ? '<span class="ml-1.5 text-[10px] font-medium text-marea-gray/50 uppercase tracking-wide">diretto</span>' : ''}
+      </td>
       <td class="px-5 py-4">
         <span class="badge bg-marea-teal-light text-marea-teal font-semibold">${e.hours}h</span>
       </td>
@@ -183,7 +210,7 @@ function renderEntries() {
         </button>
       </td>
     </tr>
-  `).join('')
+  `}).join('')
 
   tbody.querySelectorAll('.entry-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -199,18 +226,45 @@ function renderEntries() {
 }
 
 function openLogHoursForm() {
+  const matchOptions = allMatches.map(m => ({
+    id: m.id,
+    label: `${m.pioniere?.full_name || '—'} \u2192 ${m.need?.project?.name || '—'}`,
+    sublabel: m.status,
+    _pioniereId: m.pioniere?.id,
+    _projectId: m.need?.project?.id,
+  }))
+
+  const pioniereOptions = allPionieri.map(p => ({
+    id: p.id,
+    label: p.full_name,
+    sublabel: p.location || undefined,
+  }))
+
+  const projectOptions = allProjects.map(p => ({
+    id: p.id,
+    label: p.name,
+    sublabel: p.type === 'onda_project' ? 'Onda' : 'Fondazione',
+  }))
+
   const content = `
     <form id="log-hours-form" class="space-y-5">
       <div>
-        <label class="block text-sm font-medium text-marea-black mb-1.5">Abbinamento *</label>
-        <select name="match_id" required class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
-          <option value="">Seleziona...</option>
-          ${allMatches.map(m => `
-            <option value="${m.id}">${m.pioniere?.full_name || '—'} → ${m.need?.project?.name || '—'}</option>
-          `).join('')}
-        </select>
-        ${allMatches.length === 0 ? '<p class="text-xs text-marea-gray/60 mt-1.5">Nessun abbinamento confermato/attivo. Crea e conferma abbinamenti nella sezione Matching.</p>' : ''}
+        <label class="block text-sm font-medium text-marea-black mb-1.5">Abbinamento</label>
+        ${renderSearchableSelect({ id: 'lh-match', placeholder: 'Cerca abbinamento (opzionale)...' })}
+        <p class="text-xs text-marea-gray/50 mt-1.5">Seleziona un abbinamento o scegli pioniere e progetto direttamente.</p>
       </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-marea-black mb-1.5">Pioniere *</label>
+          ${renderSearchableSelect({ id: 'lh-pioniere', placeholder: 'Cerca pioniere...' })}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-marea-black mb-1.5">Progetto *</label>
+          ${renderSearchableSelect({ id: 'lh-project', placeholder: 'Cerca progetto...' })}
+        </div>
+      </div>
+
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-marea-black mb-1.5">Ore *</label>
@@ -228,6 +282,7 @@ function openLogHoursForm() {
         <textarea name="description" rows="2" placeholder="Che attivit&agrave; &egrave; stata svolta?"
                   class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"></textarea>
       </div>
+      <div id="lh-validation-msg" class="hidden text-sm text-red-500"></div>
       <div class="flex justify-end gap-3 pt-3 border-t border-marea-border/60">
         <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
         <button type="submit" class="btn-gold py-2 px-5">Registra ore</button>
@@ -237,17 +292,79 @@ function openLogHoursForm() {
 
   showModal(renderModal({ title: 'Registra ore', content }))
 
+  // Init the three searchable selects
+  let linkedFromMatch = false
+
+  const matchCtrl = initSearchableSelect({
+    id: 'lh-match',
+    options: matchOptions,
+    onSelect: (opt) => {
+      // Auto-fill pioniere and project from the selected match
+      const matchData = matchOptions.find(m => m.id === opt.id)
+      if (matchData) {
+        linkedFromMatch = true
+        if (matchData._pioniereId) pioniereCtrl.setValue(matchData._pioniereId)
+        if (matchData._projectId) projectCtrl.setValue(matchData._projectId)
+      }
+    },
+    onClear: () => {
+      if (linkedFromMatch) {
+        pioniereCtrl.clear()
+        projectCtrl.clear()
+        linkedFromMatch = false
+      }
+    },
+  })
+
+  const pioniereCtrl = initSearchableSelect({
+    id: 'lh-pioniere',
+    options: pioniereOptions,
+    onSelect: () => {
+      // If user manually changes pioniere, unlink from match
+      if (linkedFromMatch) {
+        // Don't clear—user is overriding
+      }
+    },
+  })
+
+  const projectCtrl = initSearchableSelect({
+    id: 'lh-project',
+    options: projectOptions,
+    onSelect: () => {},
+  })
+
   document.getElementById('log-hours-form').addEventListener('submit', async (e) => {
     e.preventDefault()
     const fd = new FormData(e.target)
 
+    const matchVal = matchCtrl.getValue()
+    const pioniereVal = pioniereCtrl.getValue()
+    const projectVal = projectCtrl.getValue()
+
+    // Validation: pioniere and project are required
+    const validationMsg = document.getElementById('lh-validation-msg')
+    if (!pioniereVal || !projectVal) {
+      validationMsg.textContent = 'Seleziona un pioniere e un progetto.'
+      validationMsg.classList.remove('hidden')
+      return
+    }
+    validationMsg.classList.add('hidden')
+
+    const entry = {
+      hours: parseFloat(fd.get('hours')),
+      date: fd.get('date'),
+      description: fd.get('description') || null,
+      pioniere_id: pioniereVal.id,
+      project_id: projectVal.id,
+    }
+
+    // If a match was selected, also link it
+    if (matchVal) {
+      entry.match_id = matchVal.id
+    }
+
     try {
-      const { error } = await supabase.from('time_entries').insert({
-        match_id: fd.get('match_id'),
-        hours: parseFloat(fd.get('hours')),
-        date: fd.get('date'),
-        description: fd.get('description') || null,
-      })
+      const { error } = await supabase.from('time_entries').insert(entry)
       if (error) throw error
       closeModal()
       await loadEntries()
