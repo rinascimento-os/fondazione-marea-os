@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-marea-teal: #008eb0;
+  --color-marea-dark: #00556d;
+  --color-marea-yellow: #f5c542;
+  --color-marea-cream: #faf8f5;
+  --color-marea-light: #ebf5f9;
+  --color-marea-black: #141414;
+  --color-marea-teal-light: #e6f4f8;
+  --color-marea-gray: #6b7280;
+  --color-marea-border: #e5e2dd;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-heading: "Inter", system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-marea-cream);
+  color: var(--color-marea-black);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4c0b9;
+  border-radius: 3px;
+}
+
+/* Transition utility */
+.page-transition {
+  animation: fadeIn 0.15s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  animation: fadeInBackdrop 0.15s ease-in;
+}
+
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
