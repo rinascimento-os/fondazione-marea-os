@@ -1,6 +1,7 @@
 import { supabase } from '../supabase.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/skill-picker.js'
+import { openCsvImport } from '../components/csv-import.js'
 
 let allPionieri = []
 let allSkills = []
@@ -14,10 +15,16 @@ export function renderPionieri() {
                  class="w-full pl-10 pr-4 py-3 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all" />
           <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
-        <button id="add-pioniere-btn" class="btn-gold">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Aggiungi Pioniere
-        </button>
+        <div class="flex gap-2">
+          <button id="import-csv-btn" class="btn-outline">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            Importa CSV
+          </button>
+          <button id="add-pioniere-btn" class="btn-gold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Aggiungi Pioniere
+          </button>
+        </div>
       </div>
 
       <div id="pionieri-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -37,6 +44,13 @@ export async function initPionieri() {
   await loadPionieri()
 
   document.getElementById('add-pioniere-btn')?.addEventListener('click', () => openPioniereForm())
+  document.getElementById('import-csv-btn')?.addEventListener('click', () => {
+    openCsvImport({
+      skills: allSkills,
+      existingPionieri: allPionieri,
+      onComplete: () => loadPionieri(),
+    })
+  })
   document.getElementById('pionieri-search')?.addEventListener('input', (e) => renderList(e.target.value))
 
   if (window.location.hash.includes('new=1')) {

@@ -4,24 +4,24 @@
 -- ============================================
 -- SKILLS (if not already seeded)
 -- ============================================
-INSERT INTO skills (id, name, category) VALUES
-  ('a0000000-0000-0000-0000-000000000001', 'UX Design', 'Tech'),
-  ('a0000000-0000-0000-0000-000000000002', 'Web Development', 'Tech'),
-  ('a0000000-0000-0000-0000-000000000003', 'Mobile Development', 'Tech'),
-  ('a0000000-0000-0000-0000-000000000004', 'Data Analysis', 'Tech'),
-  ('a0000000-0000-0000-0000-000000000005', 'Project Management', 'Business'),
-  ('a0000000-0000-0000-0000-000000000006', 'Financial Planning', 'Business'),
-  ('a0000000-0000-0000-0000-000000000007', 'Marketing', 'Business'),
-  ('a0000000-0000-0000-0000-000000000008', 'Strategia', 'Business'),
-  ('a0000000-0000-0000-0000-000000000009', 'Comunicazione', 'Creative'),
-  ('a0000000-0000-0000-0000-000000000010', 'Graphic Design', 'Creative'),
-  ('a0000000-0000-0000-0000-000000000011', 'Copywriting', 'Creative'),
-  ('a0000000-0000-0000-0000-000000000012', 'Video Production', 'Creative'),
-  ('a0000000-0000-0000-0000-000000000013', 'Legal', 'Operations'),
-  ('a0000000-0000-0000-0000-000000000014', 'HR / Risorse Umane', 'Operations'),
-  ('a0000000-0000-0000-0000-000000000015', 'Fundraising', 'Operations'),
-  ('a0000000-0000-0000-0000-000000000016', 'Consulenza', 'Business'),
-  ('a0000000-0000-0000-0000-000000000017', 'UI Design', 'Tech')
+INSERT INTO skills (id, name, category, keywords) VALUES
+  ('a0000000-0000-0000-0000-000000000001', 'UX Design', 'Tech', 'ux, user experience, usabilità, esperienza utente'),
+  ('a0000000-0000-0000-0000-000000000002', 'Web Development', 'Tech', 'web develop, sviluppat, developer, frontend, backend, full-stack, fullstack, software, programmator, informatica'),
+  ('a0000000-0000-0000-0000-000000000003', 'Mobile Development', 'Tech', 'mobile, ios, android, app develop'),
+  ('a0000000-0000-0000-0000-000000000004', 'Data Analysis', 'Tech', 'data analy, data scien, analisi dati, statistic, analytics, big data, machine learning'),
+  ('a0000000-0000-0000-0000-000000000005', 'Project Management', 'Business', 'project manag, gestione progett, coordinat, program manager'),
+  ('a0000000-0000-0000-0000-000000000006', 'Financial Planning', 'Business', 'finanz, financial, investment, banker, finance, contabil, economis, economia'),
+  ('a0000000-0000-0000-0000-000000000007', 'Marketing', 'Business', 'marketing, commerciale, vendite, sales, growth, brand manager'),
+  ('a0000000-0000-0000-0000-000000000008', 'Strategia', 'Business', 'strateg, ceo, founder, co-founder, direttore, direttrice, presidente, managing director, imprendit, chief'),
+  ('a0000000-0000-0000-0000-000000000009', 'Comunicazione', 'Creative', 'comunicazion, communication, giornalis, stampa, relazioni pubbliche, public relation, social media'),
+  ('a0000000-0000-0000-0000-000000000010', 'Graphic Design', 'Creative', 'graphic design, grafico, grafica, illustrat, art director, visual design'),
+  ('a0000000-0000-0000-0000-000000000011', 'Copywriting', 'Creative', 'copywriter, copywriting, scrittore, scrittrice, redazion, editorial, content'),
+  ('a0000000-0000-0000-0000-000000000012', 'Video Production', 'Creative', 'video, filmmaker, videomaker, regista, cinema, audiovisiv'),
+  ('a0000000-0000-0000-0000-000000000013', 'Legal', 'Operations', 'legal, avvocat, legale, giuridic, diritto, notaio, lawyer, attorney, giurist'),
+  ('a0000000-0000-0000-0000-000000000014', 'HR / Risorse Umane', 'Operations', 'risorse umane, human resource, recruiting, talent, personale'),
+  ('a0000000-0000-0000-0000-000000000015', 'Fundraising', 'Operations', 'fundraising, raccolta fondi, grant, donazioni, filantropia'),
+  ('a0000000-0000-0000-0000-000000000016', 'Consulenza', 'Business', 'consulen, consultant, consulting, advisor, policy, esperto, professore, professoressa, ricercat, università, accademi, docente'),
+  ('a0000000-0000-0000-0000-000000000017', 'UI Design', 'Tech', 'ui, user interface, interfaccia')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================

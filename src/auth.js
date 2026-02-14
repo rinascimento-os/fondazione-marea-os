@@ -1,7 +1,8 @@
 import { supabase } from './supabase.js'
 
 export async function signInWithOtp(email) {
-  const { error } = await supabase.auth.signInWithOtp({ email })
+  // Redirect back to wherever we're running (localhost or production)
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
   if (error) throw error
 }
 

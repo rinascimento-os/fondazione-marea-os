@@ -7,12 +7,14 @@ import { renderPionieri, initPionieri } from './pages/pionieri.js'
 import { renderProjects, initProjects } from './pages/projects.js'
 import { renderMatching, initMatching } from './pages/matching.js'
 import { renderTimebank, initTimebank } from './pages/timebank.js'
+import { renderSkills, initSkills } from './pages/skills.js'
 
 const app = document.getElementById('app')
 
 const routes = {
   '#/dashboard': { render: renderDashboard, init: initDashboard },
   '#/pionieri': { render: renderPionieri, init: initPionieri },
+  '#/competenze': { render: renderSkills, init: initSkills },
   '#/progetti': { render: renderProjects, init: initProjects },
   '#/matching': { render: renderMatching, init: initMatching },
   '#/timebank': { render: renderTimebank, init: initTimebank },

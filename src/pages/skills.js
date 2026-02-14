@@ -1,0 +1,182 @@
+import { supabase } from '../supabase.js'
+import { renderModal, showModal, closeModal } from '../components/modal.js'
+
+let allSkills = []
+
+const CATEGORIES = ['Tech', 'Business', 'Creative', 'Operations', 'Altro']
+
+export function renderSkills() {
+  return `
+    <div>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <p class="text-sm text-marea-gray">Gestisci le competenze e le parole chiave per il matching automatico durante l'importazione CSV.</p>
+        <button id="add-skill-btn" class="btn-gold whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Aggiungi Competenza
+        </button>
+      </div>
+
+      <div id="skills-list">
+        <p class="text-sm text-marea-gray">Caricamento...</p>
+      </div>
+    </div>
+  `
+}
+
+export async function initSkills() {
+  await loadSkillsList()
+
+  document.getElementById('add-skill-btn')?.addEventListener('click', () => openSkillForm())
+}
+
+async function loadSkillsList() {
+  try {
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .order('category')
+      .order('name')
+    if (error) throw error
+    allSkills = data || []
+  } catch {
+    allSkills = []
+  }
+  renderList()
+}
+
+function renderList() {
+  const container = document.getElementById('skills-list')
+  if (!container) return
+
+  if (allSkills.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-16">
+        <p class="text-marea-gray mb-2">Nessuna competenza definita.</p>
+        <p class="text-sm text-marea-gray/60">Clicca "Aggiungi Competenza" per iniziare.</p>
+      </div>
+    `
+    return
+  }
+
+  // Group by category
+  const grouped = {}
+  for (const skill of allSkills) {
+    const cat = skill.category || 'Altro'
+    if (!grouped[cat]) grouped[cat] = []
+    grouped[cat].push(skill)
+  }
+
+  container.innerHTML = Object.entries(grouped).map(([category, skills]) => `
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-marea-gray uppercase tracking-wider mb-3">${category}</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        ${skills.map(s => `
+          <div class="bg-white rounded-xl border border-marea-border/60 p-4 card-hover cursor-pointer skill-card" data-id="${s.id}">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <h4 class="font-medium text-marea-black text-sm">${s.name}</h4>
+                ${s.keywords ? `
+                  <div class="flex flex-wrap gap-1 mt-2">
+                    ${s.keywords.split(',').map(k => k.trim()).filter(Boolean).map(k => `
+                      <span class="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-marea-gray">${k}</span>
+                    `).join('')}
+                  </div>
+                ` : '<p class="text-xs text-marea-gray/50 mt-1">Nessuna parola chiave</p>'}
+              </div>
+              <span class="badge bg-marea-teal-light text-marea-teal text-xs">${s.category || 'Altro'}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')
+
+  container.querySelectorAll('.skill-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const skill = allSkills.find(s => s.id === card.dataset.id)
+      if (skill) openSkillForm(skill)
+    })
+  })
+}
+
+function openSkillForm(skill = null) {
+  const isEdit = !!skill
+
+  const content = `
+    <form id="skill-form" class="space-y-5">
+      <div>
+        <label class="block text-sm font-medium text-marea-black mb-1.5">Nome competenza *</label>
+        <input type="text" name="name" required value="${skill?.name || ''}"
+               class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"
+               placeholder="es. UX Design" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-marea-black mb-1.5">Categoria</label>
+        <select name="category" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
+          ${CATEGORIES.map(c => `<option value="${c}" ${skill?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-marea-black mb-1.5">Parole chiave per matching</label>
+        <input type="text" name="keywords" value="${skill?.keywords || ''}"
+               class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"
+               placeholder="es. ux, user experience, usabilit\u00e0" />
+        <p class="text-xs text-marea-gray mt-1">Separate da virgola. Usate per suggerire questa competenza durante l'importazione CSV in base al ruolo/bio.</p>
+      </div>
+      <div class="flex items-center justify-between pt-3 border-t border-marea-border/60">
+        <div>
+          ${isEdit ? `<button type="button" id="delete-skill-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina</button>` : ''}
+        </div>
+        <div class="flex gap-3">
+          <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
+          <button type="submit" class="btn-gold py-2 px-5">
+            ${isEdit ? 'Salva modifiche' : 'Aggiungi'}
+          </button>
+        </div>
+      </div>
+    </form>
+  `
+
+  showModal(renderModal({
+    title: isEdit ? 'Modifica Competenza' : 'Nuova Competenza',
+    content
+  }))
+
+  const form = document.getElementById('skill-form')
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const fd = new FormData(form)
+    const record = {
+      name: fd.get('name'),
+      category: fd.get('category') || 'Altro',
+      keywords: fd.get('keywords') || null,
+    }
+
+    try {
+      if (isEdit) {
+        const { error } = await supabase.from('skills').update(record).eq('id', skill.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('skills').insert(record)
+        if (error) throw error
+      }
+      closeModal()
+      await loadSkillsList()
+    } catch (err) {
+      alert('Errore: ' + err.message)
+    }
+  })
+
+  if (isEdit) {
+    document.getElementById('delete-skill-btn')?.addEventListener('click', async () => {
+      if (!confirm('Sei sicuro di voler eliminare questa competenza? Verr\u00e0 rimossa anche da tutti i Pionieri associati.')) return
+      try {
+        await supabase.from('skills').delete().eq('id', skill.id)
+        closeModal()
+        await loadSkillsList()
+      } catch (err) {
+        alert('Errore: ' + err.message)
+      }
+    })
+  }
+}

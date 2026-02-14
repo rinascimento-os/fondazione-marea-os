@@ -20,7 +20,8 @@ CREATE POLICY "Allow all for authenticated" ON pionieri FOR ALL TO authenticated
 CREATE TABLE IF NOT EXISTS skills (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name text NOT NULL,
-  category text
+  category text,
+  keywords text  -- comma-separated keywords for CSV import matching
 );
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all for authenticated" ON skills;
@@ -92,23 +93,23 @@ ALTER TABLE time_entries ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all for authenticated" ON time_entries;
 CREATE POLICY "Allow all for authenticated" ON time_entries FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- Seed some initial skill categories
-INSERT INTO skills (name, category) VALUES
-  ('UX Design', 'Tech'),
-  ('UI Design', 'Tech'),
-  ('Web Development', 'Tech'),
-  ('Mobile Development', 'Tech'),
-  ('Data Analysis', 'Tech'),
-  ('Project Management', 'Business'),
-  ('Financial Planning', 'Business'),
-  ('Marketing', 'Business'),
-  ('Strategia', 'Business'),
-  ('Comunicazione', 'Creative'),
-  ('Graphic Design', 'Creative'),
-  ('Copywriting', 'Creative'),
-  ('Video Production', 'Creative'),
-  ('Legal', 'Operations'),
-  ('HR / Risorse Umane', 'Operations'),
-  ('Fundraising', 'Operations'),
-  ('Consulenza', 'Business')
+-- Seed some initial skill categories with keywords for CSV import matching
+INSERT INTO skills (name, category, keywords) VALUES
+  ('UX Design', 'Tech', 'ux, user experience, usabilità, esperienza utente'),
+  ('UI Design', 'Tech', 'ui, user interface, interfaccia'),
+  ('Web Development', 'Tech', 'web develop, sviluppat, developer, frontend, backend, full-stack, fullstack, software, programmator, informatica'),
+  ('Mobile Development', 'Tech', 'mobile, ios, android, app develop'),
+  ('Data Analysis', 'Tech', 'data analy, data scien, analisi dati, statistic, analytics, big data, machine learning'),
+  ('Project Management', 'Business', 'project manag, gestione progett, coordinat, program manager'),
+  ('Financial Planning', 'Business', 'finanz, financial, investment, banker, finance, contabil, economis, economia'),
+  ('Marketing', 'Business', 'marketing, commerciale, vendite, sales, growth, brand manager'),
+  ('Strategia', 'Business', 'strateg, ceo, founder, co-founder, direttore, direttrice, presidente, managing director, imprendit, chief'),
+  ('Comunicazione', 'Creative', 'comunicazion, communication, giornalis, stampa, relazioni pubbliche, public relation, social media'),
+  ('Graphic Design', 'Creative', 'graphic design, grafico, grafica, illustrat, art director, visual design'),
+  ('Copywriting', 'Creative', 'copywriter, copywriting, scrittore, scrittrice, redazion, editorial, content'),
+  ('Video Production', 'Creative', 'video, filmmaker, videomaker, regista, cinema, audiovisiv'),
+  ('Legal', 'Operations', 'legal, avvocat, legale, giuridic, diritto, notaio, lawyer, attorney, giurist'),
+  ('HR / Risorse Umane', 'Operations', 'risorse umane, human resource, recruiting, talent, personale'),
+  ('Fundraising', 'Operations', 'fundraising, raccolta fondi, grant, donazioni, filantropia'),
+  ('Consulenza', 'Business', 'consulen, consultant, consulting, advisor, policy, esperto, professore, professoressa, ricercat, università, accademi, docente')
 ON CONFLICT DO NOTHING;

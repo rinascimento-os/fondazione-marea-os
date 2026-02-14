@@ -3,6 +3,7 @@ import { signOut } from '../auth.js'
 const navItems = [
   { hash: '#/dashboard', label: 'Dashboard', icon: dashboardIcon },
   { hash: '#/pionieri', label: 'Pionieri', icon: pioneriIcon },
+  { hash: '#/competenze', label: 'Competenze', icon: skillsIcon },
   { hash: '#/progetti', label: 'Progetti', icon: projectsIcon },
   { hash: '#/matching', label: 'Matching', icon: matchingIcon },
   { hash: '#/timebank', label: 'Banca del Tempo', icon: timebankIcon },
@@ -26,6 +27,10 @@ function matchingIcon() {
 
 function timebankIcon() {
   return `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+}
+
+function skillsIcon() {
+  return `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>`
 }
 
 export function renderLayout(contentHtml, currentHash) {
