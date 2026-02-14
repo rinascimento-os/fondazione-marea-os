@@ -6,20 +6,22 @@ let allEntries = []
 let allMatches = []
 let allPionieri = []
 let allProjects = []
-let filterPioniere = ''
-let filterProject = ''
+let filterPioniere = null
+let filterProject = null
+let filterPioniereCtrl = null
+let filterProjectCtrl = null
 
 export function renderTimebank() {
   return `
     <div>
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div class="flex flex-wrap gap-2">
-          <select id="tb-filter-pioniere" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
-            <option value="">Tutti i Pionieri</option>
-          </select>
-          <select id="tb-filter-project" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
-            <option value="">Tutti i progetti</option>
-          </select>
+        <div class="flex flex-wrap items-center gap-2 flex-1">
+          <div class="w-56">
+            ${renderSearchableSelect({ id: 'tb-filter-pioniere', placeholder: 'Filtra per Pioniere...' })}
+          </div>
+          <div class="w-56">
+            ${renderSearchableSelect({ id: 'tb-filter-project', placeholder: 'Filtra per progetto...' })}
+          </div>
         </div>
         <button id="log-hours-btn" class="btn-gold">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -86,8 +88,8 @@ export async function initTimebank() {
   await Promise.all([loadEntries(), loadFormData()])
 
   document.getElementById('log-hours-btn')?.addEventListener('click', () => openLogHoursForm())
-  document.getElementById('tb-filter-pioniere')?.addEventListener('change', (e) => { filterPioniere = e.target.value; renderEntries() })
-  document.getElementById('tb-filter-project')?.addEventListener('change', (e) => { filterProject = e.target.value; renderEntries() })
+
+  initFilterSelects()
 }
 
 async function loadFormData() {
@@ -124,7 +126,7 @@ async function loadEntries() {
     allEntries = []
   }
 
-  populateFilters()
+  updateFilterOptions()
   renderEntries()
   renderStats()
 }
@@ -138,26 +140,48 @@ function entryProject(e) {
   return e.match?.need?.project || e.project || null
 }
 
-function populateFilters() {
-  const pioniereSelect = document.getElementById('tb-filter-pioniere')
-  const projectSelect = document.getElementById('tb-filter-project')
-  if (!pioniereSelect || !projectSelect) return
-
-  const pionieri = new Map()
-  const projects = new Map()
+function initFilterSelects() {
+  const pioniereMap = new Map()
+  const projectMap = new Map()
 
   allEntries.forEach(e => {
     const p = entryPioniere(e)
     const proj = entryProject(e)
-    if (p) pionieri.set(p.id, p.full_name)
-    if (proj) projects.set(proj.id, proj.name)
+    if (p) pioniereMap.set(p.id, p.full_name)
+    if (proj) projectMap.set(proj.id, proj.name)
   })
 
-  pioniereSelect.innerHTML = '<option value="">Tutti i Pionieri</option>' +
-    Array.from(pionieri).map(([id, name]) => `<option value="${id}">${name}</option>`).join('')
+  const pioniereOpts = Array.from(pioniereMap).map(([id, name]) => ({ id, label: name }))
+  const projectOpts = Array.from(projectMap).map(([id, name]) => ({ id, label: name }))
 
-  projectSelect.innerHTML = '<option value="">Tutti i progetti</option>' +
-    Array.from(projects).map(([id, name]) => `<option value="${id}">${name}</option>`).join('')
+  filterPioniereCtrl = initSearchableSelect({
+    id: 'tb-filter-pioniere',
+    options: pioniereOpts,
+    onSelect: (opt) => { filterPioniere = opt.id; renderEntries() },
+    onClear: () => { filterPioniere = null; renderEntries() },
+  })
+
+  filterProjectCtrl = initSearchableSelect({
+    id: 'tb-filter-project',
+    options: projectOpts,
+    onSelect: (opt) => { filterProject = opt.id; renderEntries() },
+    onClear: () => { filterProject = null; renderEntries() },
+  })
+}
+
+function updateFilterOptions() {
+  const pioniereMap = new Map()
+  const projectMap = new Map()
+
+  allEntries.forEach(e => {
+    const p = entryPioniere(e)
+    const proj = entryProject(e)
+    if (p) pioniereMap.set(p.id, p.full_name)
+    if (proj) projectMap.set(proj.id, proj.name)
+  })
+
+  if (filterPioniereCtrl) filterPioniereCtrl.setOptions(Array.from(pioniereMap).map(([id, name]) => ({ id, label: name })))
+  if (filterProjectCtrl) filterProjectCtrl.setOptions(Array.from(projectMap).map(([id, name]) => ({ id, label: name })))
 }
 
 function renderStats() {
