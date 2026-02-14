@@ -5,6 +5,8 @@ let openNeeds = []
 let pionieri = []
 let allMatches = []
 let selectedNeed = null
+let needsSearchQuery = ''
+let matchesSearchQuery = ''
 
 export function renderMatching() {
   return `
@@ -20,6 +22,11 @@ export function renderMatching() {
           <!-- Left: Open needs -->
           <div>
             <h2 class="text-lg text-marea-black mb-4">Esigenze aperte</h2>
+            <div class="relative mb-4">
+              <input type="text" id="needs-search" placeholder="Cerca per progetto, competenza..."
+                     class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all" />
+              <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
             <div id="open-needs-list" class="space-y-3">
               <p class="text-sm text-marea-gray">Caricamento...</p>
             </div>
@@ -44,7 +51,12 @@ export function renderMatching() {
       </div>
 
       <div id="match-manage-view" class="hidden">
-        <div class="flex flex-wrap gap-2 mb-6">
+        <div class="flex flex-wrap items-center gap-2 mb-6">
+          <div class="relative flex-1 max-w-md">
+            <input type="text" id="matches-search" placeholder="Cerca per pioniere, progetto o competenza..."
+                   class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all" />
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
           <select id="match-status-filter" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
             <option value="">Tutti gli stati</option>
             <option value="proposed">Proposto</option>
@@ -86,6 +98,8 @@ export async function initMatching() {
     })
   })
 
+  document.getElementById('needs-search')?.addEventListener('input', (e) => { needsSearchQuery = e.target.value; renderNeedsList() })
+  document.getElementById('matches-search')?.addEventListener('input', (e) => { matchesSearchQuery = e.target.value; renderMatchesList() })
   document.getElementById('match-status-filter')?.addEventListener('change', renderMatchesList)
   document.getElementById('clear-filter')?.addEventListener('click', () => {
     selectedNeed = null
@@ -141,17 +155,27 @@ function renderNeedsList() {
   const container = document.getElementById('open-needs-list')
   if (!container) return
 
-  if (openNeeds.length === 0) {
+  let filtered = openNeeds
+  if (needsSearchQuery.trim()) {
+    const q = needsSearchQuery.toLowerCase()
+    filtered = openNeeds.filter(n =>
+      n.project?.name?.toLowerCase().includes(q) ||
+      n.skill?.name?.toLowerCase().includes(q) ||
+      n.description?.toLowerCase().includes(q)
+    )
+  }
+
+  if (filtered.length === 0) {
     container.innerHTML = `
       <div class="text-center py-12">
-        <p class="text-sm text-marea-gray">Nessuna esigenza aperta.</p>
-        <p class="text-xs text-marea-gray/60 mt-1">Crea esigenze nella sezione Progetti.</p>
+        <p class="text-sm text-marea-gray">${needsSearchQuery ? 'Nessun risultato trovato.' : 'Nessuna esigenza aperta.'}</p>
+        ${!needsSearchQuery ? '<p class="text-xs text-marea-gray/60 mt-1">Crea esigenze nella sezione Progetti.</p>' : ''}
       </div>
     `
     return
   }
 
-  container.innerHTML = openNeeds.map(n => `
+  container.innerHTML = filtered.map(n => `
     <div class="need-card bg-white rounded-xl border border-marea-border/60 p-5 cursor-pointer card-hover ${selectedNeed?.id === n.id ? 'ring-2 ring-marea-teal border-marea-teal' : ''}" data-need-id="${n.id}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1">
@@ -169,7 +193,7 @@ function renderNeedsList() {
 
   container.querySelectorAll('.need-card').forEach(card => {
     card.addEventListener('click', () => {
-      selectedNeed = openNeeds.find(n => n.id === card.dataset.needId)
+      selectedNeed = openNeeds.find(n => n.id === card.dataset.needId) || filtered.find(n => n.id === card.dataset.needId)
       container.querySelectorAll('.need-card').forEach(c => c.classList.remove('ring-2', 'ring-marea-teal', 'border-marea-teal'))
       card.classList.add('ring-2', 'ring-marea-teal', 'border-marea-teal')
       renderPionieriList()
@@ -314,6 +338,16 @@ function renderMatchesList() {
 
   const statusFilter = document.getElementById('match-status-filter')?.value || ''
   let filtered = allMatches
+  if (matchesSearchQuery.trim()) {
+    const q = matchesSearchQuery.toLowerCase()
+    filtered = filtered.filter(m =>
+      m.pioniere?.full_name?.toLowerCase().includes(q) ||
+      m.need?.project?.name?.toLowerCase().includes(q) ||
+      m.need?.skill?.name?.toLowerCase().includes(q) ||
+      m.need?.description?.toLowerCase().includes(q) ||
+      m.notes?.toLowerCase().includes(q)
+    )
+  }
   if (statusFilter) filtered = filtered.filter(m => m.status === statusFilter)
 
   if (filtered.length === 0) {

@@ -6,12 +6,18 @@ let allProjects = []
 let allSkills = []
 let filterType = ''
 let filterStatus = ''
+let searchQuery = ''
 
 export function renderProjects() {
   return `
     <div>
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap items-center gap-2 flex-1">
+          <div class="relative flex-1 max-w-md">
+            <input type="text" id="projects-search" placeholder="Cerca per nome o descrizione..."
+                   class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all" />
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
           <select id="filter-type" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
             <option value="">Tutti i tipi</option>
             <option value="onda_project">Progetto Onda</option>
@@ -47,6 +53,7 @@ export async function initProjects() {
   await loadProjects()
 
   document.getElementById('add-project-btn')?.addEventListener('click', () => openProjectForm())
+  document.getElementById('projects-search')?.addEventListener('input', (e) => { searchQuery = e.target.value; renderList() })
   document.getElementById('filter-type')?.addEventListener('change', (e) => { filterType = e.target.value; renderList() })
   document.getElementById('filter-status')?.addEventListener('change', (e) => { filterStatus = e.target.value; renderList() })
 
@@ -75,6 +82,14 @@ function renderList() {
   if (!container) return
 
   let filtered = allProjects
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase()
+    filtered = filtered.filter(p =>
+      p.name?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q) ||
+      p.project_needs?.some(n => n.skill?.name?.toLowerCase().includes(q))
+    )
+  }
   if (filterType) filtered = filtered.filter(p => p.type === filterType)
   if (filterStatus) filtered = filtered.filter(p => p.status === filterStatus)
 
