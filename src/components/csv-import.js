@@ -332,42 +332,22 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
                   <td class="py-2.5 pr-3 text-marea-gray text-xs">${r.email || '\u2014'}</td>
                   <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[160px] truncate" title="${(r.company || '').replace(/"/g, '&quot;')}">${r.company || '\u2014'}</td>
                   <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[200px] truncate" title="${(r.bio || '').replace(/"/g, '&quot;')}">${r.bio || '\u2014'}</td>
-                  <td class="py-2.5">
-                    <div class="flex flex-wrap gap-1" id="csv-skills-${idx}">
-                      ${r._suggestedSkills.map(s => `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-marea-teal-light text-marea-teal csv-skill-tag"
-                              data-row="${idx}" data-skill-id="${s.id}">
-                          ${s.name}
-                          <button type="button" class="hover:text-red-500 csv-skill-remove" data-row="${idx}" data-skill-id="${s.id}">&times;</button>
-                        </span>
-                      `).join('') || '<span class="text-xs text-marea-gray/60">\u2014</span>'}
-                    </div>
+                  <td class="py-2.5 text-marea-gray text-xs">
+                    ${r._suggestedSkills.map(s => s.name).join(', ') || '\u2014'}
                   </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
-        <div class="flex justify-between items-center pt-3 border-t border-marea-border/60">
-          <button id="csv-back-mapping" class="btn-outline py-2 px-5">Indietro</button>
-          <button id="csv-do-import" class="btn-gold py-2 px-5">
-            Importa ${importRows.length} Pionieri
-          </button>
-        </div>
+      </div>
+      <div class="sticky bottom-0 bg-white border-t border-marea-border/60 px-6 py-3 flex justify-between items-center -mx-6 mt-4">
+        <button id="csv-back-mapping" class="btn-outline py-2 px-5">Indietro</button>
+        <button id="csv-do-import" class="btn-gold py-2 px-5">
+          Importa ${importRows.length} Pionieri
+        </button>
       </div>
     `
-
-    // Skill remove handlers
-    body.querySelectorAll('.csv-skill-remove').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        const rowIdx = parseInt(btn.dataset.row)
-        const skillId = btn.dataset.skillId
-        importRows[rowIdx]._suggestedSkills = importRows[rowIdx]._suggestedSkills.filter(s => s.id !== skillId)
-        const tag = btn.closest('.csv-skill-tag')
-        if (tag) tag.remove()
-      })
-    })
 
     document.getElementById('csv-back-mapping').addEventListener('click', renderMappingStep)
     document.getElementById('csv-do-import').addEventListener('click', doImport)
