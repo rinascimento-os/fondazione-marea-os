@@ -246,7 +246,7 @@ function renderPionieriList() {
           </div>
           <div>
             <p class="font-semibold text-sm text-marea-black">${escapeHtml(p.full_name)}</p>
-            <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(p.location) || ''} ${p.availability ? '· ' + escapeHtml(p.availability) : ''}</p>
+            <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(p.location) || ''}</p>
             <div class="flex flex-wrap gap-1 mt-2">
               ${(p.pioniere_skills || []).map(ps => `
                 <span class="badge ${ps.skill_id === skillId ? 'bg-marea-teal text-white' : 'bg-marea-teal-light text-marea-teal'}">${escapeHtml(ps.skill?.name) || ''}</span>

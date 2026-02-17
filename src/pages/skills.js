@@ -143,7 +143,7 @@ function openSkillForm(skill = null) {
         <input type="text" name="keywords" value="${escapeHtml(skill?.keywords)}"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"
                placeholder="es. ux, user experience, usabilit\u00e0" />
-        <p class="text-xs text-marea-gray mt-1">Separate da virgola. Usate per suggerire questa competenza durante l'importazione CSV in base al ruolo/bio.</p>
+        <p class="text-xs text-marea-gray mt-1">Separate da virgola. Usate per suggerire questa competenza durante l'importazione CSV in base al ruolo.</p>
       </div>
       <div class="flex items-center justify-between pt-3 border-t border-marea-border/60">
         <div>
