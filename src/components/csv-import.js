@@ -173,41 +173,30 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
 
     const fieldOptions = [
       { value: '', label: '\u2014 Ignora \u2014' },
-      { value: 'full_name', label: 'Nome completo' },
       { value: 'first_name', label: 'Nome' },
       { value: 'last_name', label: 'Cognome' },
       { value: 'email', label: 'Email' },
       { value: 'company', label: 'Azienda' },
+      { value: 'role', label: 'Ruolo' },
+      { value: 'origin_city', label: 'Citt\u00e0 di origine' },
+      { value: 'origin_province', label: 'Provincia di origine' },
       { value: 'location', label: 'Localit\u00e0' },
-      { value: 'bio', label: 'Ruolo / Bio' },
-      { value: 'origin', label: 'Origine siciliana' },
-      { value: 'availability', label: 'Disponibilit\u00e0' },
+      { value: 'gender', label: 'Genere' },
     ]
 
     // Auto-detect column mapping
     const autoMap = {}
-    // First pass: check if we have separate nome/cognome columns
-    const hasNome = headers.some(h => {
-      const hl = h.toLowerCase().trim()
-      return hl === 'nome' || hl === 'first name' || hl === 'first_name'
-    })
-    const hasCognome = headers.some(h => {
-      const hl = h.toLowerCase().trim()
-      return hl === 'cognome' || hl === 'last name' || hl === 'last_name' || hl === 'surname'
-    })
-    const useSplitName = hasNome && hasCognome
-
     headers.forEach((h, i) => {
       const hl = h.toLowerCase().trim()
-      if (useSplitName && (hl === 'nome' || hl === 'first name' || hl === 'first_name')) autoMap[i] = 'first_name'
-      else if (useSplitName && (hl === 'cognome' || hl === 'last name' || hl === 'last_name' || hl === 'surname')) autoMap[i] = 'last_name'
-      else if (hl.includes('nome') || hl.includes('name') || hl === 'person') autoMap[i] = 'full_name'
-      else if (hl.includes('email') || hl.includes('e-mail') || hl.includes('mail')) autoMap[i] = 'email'
-      else if (hl.includes('azienda') || hl.includes('company') || hl.includes('ente') || hl.includes('organizzazione')) autoMap[i] = 'company'
-      else if (hl.includes('citt') || hl.includes('city') || hl.includes('location') || hl.includes('luogo') || hl.includes('sede')) autoMap[i] = 'location'
-      else if (hl.includes('ruolo') || hl.includes('role') || hl.includes('bio') || hl.includes('descri') || hl.includes('job') || hl.includes('professione') || hl.includes('titolo')) autoMap[i] = 'bio'
-      else if (hl.includes('origin') || hl.includes('sicilian')) autoMap[i] = 'origin'
-      else if (hl.includes('disponibil') || hl.includes('availability') || hl.includes('ore')) autoMap[i] = 'availability'
+      if (/\bnome\b/.test(hl) && !hl.includes('cognome')) autoMap[i] = 'first_name'
+      else if (hl.includes('cognome')) autoMap[i] = 'last_name'
+      else if (hl.includes('email') || hl.includes('mail')) autoMap[i] = 'email'
+      else if (hl.includes('azienda') || hl.includes('ente')) autoMap[i] = 'company'
+      else if (hl.includes('ruolo') || hl.includes('ricoperto')) autoMap[i] = 'role'
+      else if (hl.includes('provincia')) autoMap[i] = 'origin_province'
+      else if (hl.includes('origine')) autoMap[i] = 'origin_city'
+      else if (hl.includes('vivi') || hl.includes('residenza')) autoMap[i] = 'location'
+      else if (hl.includes('genere') || hl.includes('gender')) autoMap[i] = 'gender'
     })
 
     const body = document.getElementById('csv-import-body')
@@ -256,10 +245,8 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
       })
 
       const mappedFields = Object.values(columnMapping)
-      const hasFullName = mappedFields.includes('full_name')
-      const hasFirstLast = mappedFields.includes('first_name') && mappedFields.includes('last_name')
-      if (!hasFullName && !hasFirstLast) {
-        alert('Devi mappare almeno "Nome completo" oppure sia "Nome" che "Cognome".')
+      if (!mappedFields.includes('first_name') || !mappedFields.includes('last_name')) {
+        alert('Devi mappare almeno "Nome" e "Cognome".')
         return
       }
 
@@ -271,27 +258,19 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
     const dataRows = parsedData.slice(1).filter(row => row.some(cell => cell.trim()))
 
     importRows = dataRows.map(row => {
-      const record = { full_name: '', email: '', company: '', location: '', bio: '', availability: '', _origin: '', _first_name: '', _last_name: '' }
+      const record = { full_name: '', email: '', company: '', location: '', role: '', origin: '', gender: '' }
+      let firstName = '', lastName = '', originCity = '', originProvince = ''
       for (const [colIdx, field] of Object.entries(columnMapping)) {
         const val = sanitizeCsvValue(row[parseInt(colIdx)] || '')
-        if (field === 'origin') record._origin = val
-        else if (field === 'first_name') record._first_name = val
-        else if (field === 'last_name') record._last_name = val
+        if (field === 'first_name') firstName = val
+        else if (field === 'last_name') lastName = val
+        else if (field === 'origin_city') originCity = val
+        else if (field === 'origin_province') originProvince = val
         else record[field] = val
       }
-
-      // Combine first + last name if mapped separately
-      if (record._first_name || record._last_name) {
-        record.full_name = `${record._first_name} ${record._last_name}`.trim()
-      }
-      delete record._first_name
-      delete record._last_name
-
-      // Append origin to bio
-      if (record._origin) {
-        record.bio = record.bio ? `${record.bio} \u2014 ${record._origin}` : record._origin
-      }
-      delete record._origin
+      record.full_name = `${firstName} ${lastName}`.trim()
+      if (originCity && originProvince) record.origin = `${originCity} (${originProvince})`
+      else record.origin = originCity || originProvince
 
       // Dedup check
       const emailMatch = record.email && existingPionieri.find(p =>
@@ -303,8 +282,9 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
       record._existing = emailMatch || nameMatch || null
       record._isDuplicate = !!(emailMatch || nameMatch)
 
-      // Suggest skills from bio
-      record._suggestedSkills = suggestSkills(record.bio, skills)
+      // Suggest skills from role and company
+      const skillText = [record.role, record.company].filter(Boolean).join(' ')
+      record._suggestedSkills = suggestSkills(skillText, skills)
 
       return record
     })
@@ -333,12 +313,18 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
                 <th class="pb-2 pr-3">Nome</th>
                 <th class="pb-2 pr-3">Email</th>
                 <th class="pb-2 pr-3">Azienda</th>
-                <th class="pb-2 pr-3">Ruolo / Bio</th>
+                <th class="pb-2 pr-3">Ruolo</th>
+                <th class="pb-2 pr-3">Città di origine</th>
+                <th class="pb-2 pr-3">Località</th>
+                <th class="pb-2 pr-3">Genere</th>
                 <th class="pb-2">Competenze suggerite</th>
               </tr>
             </thead>
             <tbody>
-              ${importRows.map((r, idx) => `
+              ${importRows.map(r => {
+                const isUpdated = (field) => r._isDuplicate && r._existing && r[field] && r[field] !== (r._existing[field] || '')
+                const tag = (field) => isUpdated(field) ? ' <span class="inline-block ml-1 px-1 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 leading-none align-middle">new</span>' : ''
+                return `
                 <tr class="border-b border-marea-border/30 ${r._isDuplicate ? 'bg-amber-50/50' : ''}">
                   <td class="py-2.5 pr-3">
                     ${r._isDuplicate
@@ -346,14 +332,17 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
                       : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Nuovo</span>'}
                   </td>
                   <td class="py-2.5 pr-3 font-medium text-marea-black whitespace-nowrap">${escapeHtml(r.full_name)}</td>
-                  <td class="py-2.5 pr-3 text-marea-gray text-xs">${escapeHtml(r.email) || '\u2014'}</td>
-                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[160px] truncate" title="${escapeHtml(r.company)}">${escapeHtml(r.company) || '\u2014'}</td>
-                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[200px] truncate" title="${escapeHtml(r.bio)}">${escapeHtml(r.bio) || '\u2014'}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs">${escapeHtml(r.email) || '\u2014'}${tag('email')}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[140px]" title="${escapeHtml(r.company)}">${escapeHtml(r.company) || '\u2014'}${tag('company')}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[140px]" title="${escapeHtml(r.role)}">${escapeHtml(r.role) || '\u2014'}${tag('role')}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[140px]" title="${escapeHtml(r.origin)}">${escapeHtml(r.origin) || '\u2014'}${tag('origin')}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[140px]" title="${escapeHtml(r.location)}">${escapeHtml(r.location) || '\u2014'}${tag('location')}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs">${escapeHtml(r.gender) || '\u2014'}${tag('gender')}</td>
                   <td class="py-2.5 text-marea-gray text-xs">
                     ${r._suggestedSkills.map(s => escapeHtml(s.name)).join(', ') || '\u2014'}
                   </td>
                 </tr>
-              `).join('')}
+              `}).join('')}
             </tbody>
           </table>
         </div>
@@ -416,9 +405,10 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
         full_name: row.full_name,
         email: row.email || null,
         company: row.company || null,
+        role: row.role || null,
+        origin: row.origin || null,
         location: row.location || null,
-        bio: row.bio || null,
-        availability: row.availability || null,
+        gender: row.gender || null,
         updated_at: now,
       }))
       const { data: insertedData, error } = await supabase.from('pionieri').insert(insertRecords).select()
@@ -438,7 +428,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
       const chunk = updateRows.slice(i, i + CHUNK)
       const results = await Promise.all(chunk.map(row => {
         const updateRecord = { updated_at: now }
-        for (const key of ['full_name', 'email', 'company', 'location', 'bio', 'availability']) {
+        for (const key of ['full_name', 'email', 'company', 'role', 'origin', 'location', 'gender']) {
           const val = row[key]
           if (val) updateRecord[key] = val
         }
@@ -464,11 +454,14 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
         .from('pioniere_skills').select('pioniere_id, skill_id').in('pioniere_id', pioniereIds)
       const existingSet = new Set((allExistingSkills || []).map(s => `${s.pioniere_id}:${s.skill_id}`))
 
-      // Build all new skill links at once
+      // Build all new skill links at once, deduplicating
       const allNewSkills = []
+      const seen = new Set(existingSet)
       for (const row of allRowsWithIds) {
         for (const skill of row._suggestedSkills) {
-          if (!existingSet.has(`${row._pioniereId}:${skill.id}`)) {
+          const key = `${row._pioniereId}:${skill.id}`
+          if (!seen.has(key)) {
+            seen.add(key)
             allNewSkills.push({ pioniere_id: row._pioniereId, skill_id: skill.id })
           }
         }
