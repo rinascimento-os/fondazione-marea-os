@@ -88,10 +88,13 @@ function renderList(filter = '') {
       <h3 class="text-sm font-semibold text-marea-gray uppercase tracking-wider mb-3">${escapeHtml(category)}</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         ${skills.map(s => `
-          <div class="bg-white rounded-xl border border-marea-border/60 p-4 card-hover cursor-pointer skill-card" data-id="${s.id}">
+          <div class="bg-white rounded-xl border border-marea-border/60 p-4" data-id="${s.id}">
             <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
-                <h4 class="font-medium text-marea-black text-sm">${escapeHtml(s.name)}</h4>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-medium text-marea-black text-sm">${escapeHtml(s.name)}</h4>
+                  <span class="badge bg-marea-teal-light text-marea-teal text-xs">${escapeHtml(s.category) || 'Altro'}</span>
+                </div>
                 ${s.keywords ? `
                   <div class="flex flex-wrap gap-1 mt-2">
                     ${s.keywords.split(',').map(k => k.trim()).filter(Boolean).map(k => `
@@ -100,7 +103,9 @@ function renderList(filter = '') {
                   </div>
                 ` : '<p class="text-xs text-marea-gray/50 mt-1">Nessuna parola chiave</p>'}
               </div>
-              <span class="badge bg-marea-teal-light text-marea-teal text-xs">${escapeHtml(s.category) || 'Altro'}</span>
+              <button type="button" class="edit-skill-btn w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-teal hover:bg-marea-teal-light transition-all flex-shrink-0" data-id="${s.id}" title="Modifica">
+                <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
             </div>
           </div>
         `).join('')}
@@ -108,9 +113,9 @@ function renderList(filter = '') {
     </div>
   `).join('')
 
-  container.querySelectorAll('.skill-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const skill = allSkills.find(s => s.id === card.dataset.id)
+  container.querySelectorAll('.edit-skill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const skill = allSkills.find(s => s.id === btn.dataset.id)
       if (skill) openSkillForm(skill)
     })
   })

@@ -31,7 +31,7 @@ export function renderPionieri() {
         </div>
       </div>
 
-      <div id="pionieri-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div id="pionieri-list" class="columns-1 lg:columns-2 gap-4 space-y-4">
         <p class="text-sm text-marea-gray col-span-full">Caricamento...</p>
       </div>
     </div>
@@ -118,7 +118,6 @@ function renderList(filter = '') {
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-marea-gray">
             ${p.company ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>${escapeHtml(p.company)}</span>` : ''}
             ${p.location ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${escapeHtml(p.location)}</span>` : ''}
-            ${p.email ? `<span class="truncate">${escapeHtml(p.email)}</span>` : ''}
             ${p.availability ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${escapeHtml(p.availability)}</span>` : ''}
           </div>
           ${(p.pioniere_skills || []).length > 0 ? `
@@ -207,7 +206,7 @@ function openPioniereDetail(pioniere) {
         <div class="flex-1 min-w-0">
           <h3 class="text-xl font-bold text-marea-black">${escapeHtml(pioniere.full_name)}</h3>
           ${pioniere.role || pioniere.company ? `<p class="text-sm text-marea-gray mt-0.5">${[pioniere.role, pioniere.company].filter(Boolean).map(v => escapeHtml(v)).join(' · ')}</p>` : ''}
-          ${pioniere.gender ? `<span class="inline-block mt-1.5 text-xs font-medium text-marea-gray bg-gray-100 px-2 py-0.5 rounded">${escapeHtml(pioniere.gender)}</span>` : ''}
+          ${pioniere.gender ? `<p class="text-xs text-marea-gray mt-1.5">Genere: ${escapeHtml(pioniere.gender)}</p>` : ''}
         </div>
       </div>
 
@@ -349,7 +348,7 @@ function openPioniereForm(pioniere = null) {
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label class="block text-sm font-medium text-marea-black mb-1.5">Genere</label>
-          <select name="gender" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
+          <select name="gender" class="w-full px-4 pr-10 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px] bg-[right_12px_center] bg-no-repeat">
             <option value="">—</option>
             <option value="M" ${pioniere?.gender === 'M' ? 'selected' : ''}>M</option>
             <option value="F" ${pioniere?.gender === 'F' ? 'selected' : ''}>F</option>
@@ -385,6 +384,13 @@ function openPioniereForm(pioniere = null) {
   })
 
   const form = document.getElementById('pioniere-form')
+  form.querySelectorAll('input[type="text"], input[type="email"]').forEach(input => {
+    input.addEventListener('focus', () => {
+      const len = input.value.length
+      input.setSelectionRange(len, len)
+    })
+  })
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
