@@ -295,6 +295,9 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
       return record
     })
 
+    // Sort: new first, then existing
+    importRows.sort((a, b) => (a._isDuplicate === b._isDuplicate ? 0 : a._isDuplicate ? 1 : -1))
+
     const newCount = importRows.filter(r => !r._isDuplicate).length
     const updateCount = importRows.filter(r => r._isDuplicate).length
 
@@ -341,78 +344,132 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
           </table>
         </div>
       </div>
-      <div class="sticky bottom-0 bg-white border-t border-marea-border/60 px-6 py-3 flex justify-between items-center -mx-6 mt-4">
-        <button id="csv-back-mapping" class="btn-outline py-2 px-5">Indietro</button>
-        <button id="csv-do-import" class="btn-gold py-2 px-5">
-          Importa ${importRows.length} Pionieri
-        </button>
-      </div>
     `
 
-    document.getElementById('csv-back-mapping').addEventListener('click', renderMappingStep)
-    document.getElementById('csv-do-import').addEventListener('click', doImport)
+    // Add footer bar outside scrollable body, as sibling in modal flex column
+    const modal = body.parentElement
+    let footer = modal.querySelector('#csv-import-footer')
+    if (footer) footer.remove()
+    footer = document.createElement('div')
+    footer.id = 'csv-import-footer'
+    footer.className = 'border-t border-marea-border/60 px-6 py-3 flex justify-between items-center rounded-b-2xl'
+    footer.innerHTML = `
+      <button id="csv-back-mapping" class="btn-outline py-2 px-5">Indietro</button>
+      <button id="csv-do-import" class="btn-gold py-2 px-5">
+        Importa ${importRows.length} Pionieri
+      </button>
+    `
+    modal.appendChild(footer)
+
+    document.getElementById('csv-back-mapping').addEventListener('click', () => {
+      footer.remove()
+      renderMappingStep()
+    })
+    document.getElementById('csv-do-import').addEventListener('click', () => {
+      footer.remove()
+      doImport()
+    })
   }
 
   async function doImport() {
-    const importBtn = document.getElementById('csv-do-import')
-    importBtn.disabled = true
-    importBtn.textContent = 'Importazione in corso...'
+    const body = document.getElementById('csv-import-body')
+    body.innerHTML = `
+      <div class="text-center py-16">
+        <div class="inline-block mb-5">
+          <svg class="animate-spin w-10 h-10 text-marea-teal" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-marea-black mb-2">Importazione in corso...</h3>
+        <p id="csv-import-status" class="text-sm text-marea-gray">Preparazione...</p>
+      </div>
+    `
+    const statusEl = document.getElementById('csv-import-status')
 
     let imported = 0
     let updated = 0
     let errors = []
 
-    for (const row of importRows) {
-      const record = {
+    const now = new Date().toISOString()
+    const newRows = importRows.filter(r => !r._isDuplicate)
+    const updateRows = importRows.filter(r => r._isDuplicate && r._existing)
+
+    // Batch insert all new pionieri at once
+    statusEl.textContent = `Inserimento di ${newRows.length} nuovi Pionieri...`
+    if (newRows.length > 0) {
+      const insertRecords = newRows.map(row => ({
         full_name: row.full_name,
         email: row.email || null,
         company: row.company || null,
         location: row.location || null,
         bio: row.bio || null,
         availability: row.availability || null,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
+      }))
+      const { data: insertedData, error } = await supabase.from('pionieri').insert(insertRecords).select()
+      if (error) {
+        errors.push(`Inserimento batch: ${error.message}`)
+      } else {
+        imported = insertedData.length
+        // Map back IDs for skill assignment
+        insertedData.forEach((p, i) => { newRows[i]._insertedId = p.id })
+      }
+    }
+
+    // Batch updates in parallel chunks
+    if (updateRows.length > 0) statusEl.textContent = `Aggiornamento di ${updateRows.length} Pionieri esistenti...`
+    const CHUNK = 20
+    for (let i = 0; i < updateRows.length; i += CHUNK) {
+      const chunk = updateRows.slice(i, i + CHUNK)
+      const results = await Promise.all(chunk.map(row => {
+        const updateRecord = { updated_at: now }
+        for (const key of ['full_name', 'email', 'company', 'location', 'bio', 'availability']) {
+          const val = row[key]
+          if (val) updateRecord[key] = val
+        }
+        return supabase.from('pionieri').update(updateRecord).eq('id', row._existing.id)
+      }))
+      results.forEach((res, j) => {
+        if (res.error) errors.push(`${chunk[j].full_name}: ${res.error.message}`)
+        else updated++
+      })
+    }
+
+    // Batch skill assignment
+    statusEl.textContent = 'Assegnazione competenze...'
+    const allRowsWithIds = [
+      ...newRows.filter(r => r._insertedId).map(r => ({ ...r, _pioniereId: r._insertedId })),
+      ...updateRows.map(r => ({ ...r, _pioniereId: r._existing.id })),
+    ].filter(r => r._suggestedSkills.length > 0)
+
+    if (allRowsWithIds.length > 0) {
+      // Fetch all existing skill assignments in one query
+      const pioniereIds = allRowsWithIds.map(r => r._pioniereId)
+      const { data: allExistingSkills } = await supabase
+        .from('pioniere_skills').select('pioniere_id, skill_id').in('pioniere_id', pioniereIds)
+      const existingSet = new Set((allExistingSkills || []).map(s => `${s.pioniere_id}:${s.skill_id}`))
+
+      // Build all new skill links at once
+      const allNewSkills = []
+      for (const row of allRowsWithIds) {
+        for (const skill of row._suggestedSkills) {
+          if (!existingSet.has(`${row._pioniereId}:${skill.id}`)) {
+            allNewSkills.push({ pioniere_id: row._pioniereId, skill_id: skill.id })
+          }
+        }
       }
 
-      try {
-        let pioniereId
-        if (row._isDuplicate && row._existing) {
-          // Only overwrite fields that have actual values in the CSV — preserve existing data for empty cells
-          const updateRecord = { updated_at: record.updated_at }
-          for (const key of ['full_name', 'email', 'company', 'location', 'bio', 'availability']) {
-            if (record[key]) updateRecord[key] = record[key]
-          }
-          const { error } = await supabase.from('pionieri').update(updateRecord).eq('id', row._existing.id)
-          if (error) throw error
-          pioniereId = row._existing.id
-          updated++
-        } else {
-          const { data, error } = await supabase.from('pionieri').insert(record).select().single()
-          if (error) throw error
-          pioniereId = data.id
-          imported++
+      if (allNewSkills.length > 0) {
+        // Insert in chunks to avoid payload limits
+        for (let i = 0; i < allNewSkills.length; i += 500) {
+          const { error } = await supabase.from('pioniere_skills').insert(allNewSkills.slice(i, i + 500))
+          if (error) errors.push(`Skills batch: ${error.message}`)
         }
-
-        // Add suggested skills (preserve existing skills for updates)
-        if (row._suggestedSkills.length > 0) {
-          const { data: existingSkills } = await supabase
-            .from('pioniere_skills').select('skill_id').eq('pioniere_id', pioniereId)
-          const existingSkillIds = new Set((existingSkills || []).map(s => s.skill_id))
-
-          const newSkills = row._suggestedSkills
-            .filter(s => !existingSkillIds.has(s.id))
-            .map(s => ({ pioniere_id: pioniereId, skill_id: s.id }))
-
-          if (newSkills.length > 0) {
-            await supabase.from('pioniere_skills').insert(newSkills)
-          }
-        }
-      } catch (err) {
-        errors.push(`${row.full_name}: ${err.message}`)
       }
     }
 
     // Show results
-    const body = document.getElementById('csv-import-body')
     body.innerHTML = `
       <div class="text-center py-8">
         <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
