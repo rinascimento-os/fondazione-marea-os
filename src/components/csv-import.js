@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 
 function detectDelimiter(text) {
   const firstLine = text.split('\n')[0]
@@ -60,6 +61,13 @@ function suggestSkills(jobDescription, skills) {
     }
   }
   return suggested
+}
+
+function sanitizeCsvValue(val) {
+  if (typeof val === 'string' && /^[=+\-@\t\r]/.test(val)) {
+    return "'" + val
+  }
+  return val
 }
 
 export function openCsvImport({ skills, existingPionieri, onComplete }) {
@@ -128,6 +136,12 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
   }
 
   function handleFile(file) {
+    const MAX_CSV_SIZE = 5 * 1024 * 1024 // 5 MB
+    if (file.size > MAX_CSV_SIZE) {
+      alert('File troppo grande (max 5 MB)')
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target.result
@@ -208,7 +222,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
                 <tr class="border-b border-marea-border">
                   ${headers.map((h, i) => `
                     <th class="pb-3 pr-4 text-left min-w-[140px]">
-                      <div class="text-xs text-marea-gray mb-1.5 font-normal truncate">${h}</div>
+                      <div class="text-xs text-marea-gray mb-1.5 font-normal truncate">${escapeHtml(h)}</div>
                       <select data-col="${i}" class="csv-col-map w-full px-2 py-1.5 rounded-lg border border-marea-border text-sm focus-ring">
                         ${fieldOptions.map(f => `<option value="${f.value}" ${autoMap[i] === f.value ? 'selected' : ''}>${f.label}</option>`).join('')}
                       </select>
@@ -219,7 +233,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
               <tbody>
                 ${previewRows.map(row => `
                   <tr class="border-b border-marea-border/40">
-                    ${headers.map((_, i) => `<td class="py-2 pr-4 text-marea-gray text-xs truncate max-w-[180px]">${row[i] || ''}</td>`).join('')}
+                    ${headers.map((_, i) => `<td class="py-2 pr-4 text-marea-gray text-xs truncate max-w-[180px]">${escapeHtml(row[i]) || ''}</td>`).join('')}
                   </tr>
                 `).join('')}
               </tbody>
@@ -259,7 +273,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
     importRows = dataRows.map(row => {
       const record = { full_name: '', email: '', company: '', location: '', bio: '', availability: '', _origin: '', _first_name: '', _last_name: '' }
       for (const [colIdx, field] of Object.entries(columnMapping)) {
-        const val = row[parseInt(colIdx)] || ''
+        const val = sanitizeCsvValue(row[parseInt(colIdx)] || '')
         if (field === 'origin') record._origin = val
         else if (field === 'first_name') record._first_name = val
         else if (field === 'last_name') record._last_name = val
@@ -331,12 +345,12 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
                       ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Esistente</span>'
                       : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Nuovo</span>'}
                   </td>
-                  <td class="py-2.5 pr-3 font-medium text-marea-black whitespace-nowrap">${r.full_name}</td>
-                  <td class="py-2.5 pr-3 text-marea-gray text-xs">${r.email || '\u2014'}</td>
-                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[160px] truncate" title="${(r.company || '').replace(/"/g, '&quot;')}">${r.company || '\u2014'}</td>
-                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[200px] truncate" title="${(r.bio || '').replace(/"/g, '&quot;')}">${r.bio || '\u2014'}</td>
+                  <td class="py-2.5 pr-3 font-medium text-marea-black whitespace-nowrap">${escapeHtml(r.full_name)}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs">${escapeHtml(r.email) || '\u2014'}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[160px] truncate" title="${escapeHtml(r.company)}">${escapeHtml(r.company) || '\u2014'}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[200px] truncate" title="${escapeHtml(r.bio)}">${escapeHtml(r.bio) || '\u2014'}</td>
                   <td class="py-2.5 text-marea-gray text-xs">
-                    ${r._suggestedSkills.map(s => s.name).join(', ') || '\u2014'}
+                    ${r._suggestedSkills.map(s => escapeHtml(s.name)).join(', ') || '\u2014'}
                   </td>
                 </tr>
               `).join('')}
@@ -483,7 +497,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
         ${errors.length > 0 ? `
           <div class="mt-4 text-left bg-red-50 rounded-xl p-4">
             <p class="text-sm font-medium text-red-700 mb-1">Errori (${errors.length}):</p>
-            ${errors.map(e => `<p class="text-xs text-red-600">${e}</p>`).join('')}
+            ${errors.map(e => `<p class="text-xs text-red-600">${escapeHtml(e)}</p>`).join('')}
           </div>
         ` : ''}
         <button id="csv-import-done" class="btn-gold py-2 px-6 mt-6">Chiudi</button>

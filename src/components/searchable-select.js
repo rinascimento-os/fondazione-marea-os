@@ -1,3 +1,5 @@
+import { escapeHtml } from '../utils/escape.js'
+
 /**
  * Reusable single-select searchable dropdown component.
  *
@@ -77,7 +79,7 @@ export function initSearchableSelect({ id, options = [], onSelect, onClear }) {
                 class="ss-option w-full text-left px-4 py-2.5 text-sm hover:bg-marea-light transition-colors ${i === highlightIdx ? 'bg-marea-light' : ''} ${selectedOption?.id === o.id ? 'bg-marea-teal-light/50' : ''}"
                 data-option-id="${o.id}" data-option-idx="${i}">
           <span class="font-medium text-marea-black">${highlight(o.label, q)}</span>
-          ${o.sublabel ? `<span class="text-marea-gray ml-1.5 text-xs">· ${o.sublabel}</span>` : ''}
+          ${o.sublabel ? `<span class="text-marea-gray ml-1.5 text-xs">· ${escapeHtml(o.sublabel)}</span>` : ''}
         </button>
       `).join('')
     }
@@ -95,10 +97,11 @@ export function initSearchableSelect({ id, options = [], onSelect, onClear }) {
   }
 
   function highlight(text, query) {
-    if (!query) return text
-    const idx = text.toLowerCase().indexOf(query)
-    if (idx === -1) return text
-    return text.slice(0, idx) + '<mark class="bg-yellow-100 rounded px-0.5">' + text.slice(idx, idx + query.length) + '</mark>' + text.slice(idx + query.length)
+    if (!query) return escapeHtml(text)
+    const escaped = escapeHtml(text)
+    const idx = escaped.toLowerCase().indexOf(query)
+    if (idx === -1) return escaped
+    return escaped.slice(0, idx) + '<mark class="bg-yellow-100 rounded px-0.5">' + escaped.slice(idx, idx + query.length) + '</mark>' + escaped.slice(idx + query.length)
   }
 
   function select(opt) {

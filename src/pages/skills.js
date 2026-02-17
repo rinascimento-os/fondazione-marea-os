@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 
 let allSkills = []
@@ -84,22 +85,22 @@ function renderList(filter = '') {
 
   container.innerHTML = Object.entries(grouped).map(([category, skills]) => `
     <div class="mb-6">
-      <h3 class="text-sm font-semibold text-marea-gray uppercase tracking-wider mb-3">${category}</h3>
+      <h3 class="text-sm font-semibold text-marea-gray uppercase tracking-wider mb-3">${escapeHtml(category)}</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         ${skills.map(s => `
           <div class="bg-white rounded-xl border border-marea-border/60 p-4 card-hover cursor-pointer skill-card" data-id="${s.id}">
             <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
-                <h4 class="font-medium text-marea-black text-sm">${s.name}</h4>
+                <h4 class="font-medium text-marea-black text-sm">${escapeHtml(s.name)}</h4>
                 ${s.keywords ? `
                   <div class="flex flex-wrap gap-1 mt-2">
                     ${s.keywords.split(',').map(k => k.trim()).filter(Boolean).map(k => `
-                      <span class="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-marea-gray">${k}</span>
+                      <span class="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-marea-gray">${escapeHtml(k)}</span>
                     `).join('')}
                   </div>
                 ` : '<p class="text-xs text-marea-gray/50 mt-1">Nessuna parola chiave</p>'}
               </div>
-              <span class="badge bg-marea-teal-light text-marea-teal text-xs">${s.category || 'Altro'}</span>
+              <span class="badge bg-marea-teal-light text-marea-teal text-xs">${escapeHtml(s.category) || 'Altro'}</span>
             </div>
           </div>
         `).join('')}
@@ -122,7 +123,7 @@ function openSkillForm(skill = null) {
     <form id="skill-form" class="space-y-5">
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Nome competenza *</label>
-        <input type="text" name="name" required value="${skill?.name || ''}"
+        <input type="text" name="name" required value="${escapeHtml(skill?.name)}"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"
                placeholder="es. UX Design" />
       </div>
@@ -134,7 +135,7 @@ function openSkillForm(skill = null) {
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Parole chiave per matching</label>
-        <input type="text" name="keywords" value="${skill?.keywords || ''}"
+        <input type="text" name="keywords" value="${escapeHtml(skill?.keywords)}"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"
                placeholder="es. ux, user experience, usabilit\u00e0" />
         <p class="text-xs text-marea-gray mt-1">Separate da virgola. Usate per suggerire questa competenza durante l'importazione CSV in base al ruolo/bio.</p>
@@ -179,7 +180,8 @@ function openSkillForm(skill = null) {
       closeModal()
       await loadSkillsList()
     } catch (err) {
-      alert('Errore: ' + err.message)
+      console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
     }
   })
 
@@ -191,7 +193,8 @@ function openSkillForm(skill = null) {
         closeModal()
         await loadSkillsList()
       } catch (err) {
-        alert('Errore: ' + err.message)
+        console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
       }
     })
   }

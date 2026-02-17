@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 import { Chart, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend, DoughnutController, BarController } from 'chart.js'
 
 Chart.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend, DoughnutController, BarController)
@@ -208,7 +209,7 @@ export async function initDashboard() {
       recentMatches.forEach(m => {
         activities.push({
           date: m.created_at,
-          html: `<span class="font-medium text-marea-black">${m.pioniere?.full_name || '—'}</span> abbinato a <span class="font-medium text-marea-black">${m.need?.project?.name || '—'}</span> <span class="badge ${statusColor(m.status)}">${statusLabel(m.status)}</span>`
+          html: `<span class="font-medium text-marea-black">${escapeHtml(m.pioniere?.full_name) || '—'}</span> abbinato a <span class="font-medium text-marea-black">${escapeHtml(m.need?.project?.name) || '—'}</span> <span class="badge ${statusColor(m.status)}">${statusLabel(m.status)}</span>`
         })
       })
     }
@@ -217,7 +218,7 @@ export async function initDashboard() {
       recentEntries.forEach(e => {
         activities.push({
           date: e.date,
-          html: `<span class="font-medium text-marea-black">${e.match?.pioniere?.full_name || '—'}</span> — <span class="font-semibold text-marea-teal">${e.hours}h</span> per <span class="font-medium text-marea-black">${e.match?.need?.project?.name || '—'}</span>`
+          html: `<span class="font-medium text-marea-black">${escapeHtml(e.match?.pioniere?.full_name) || '—'}</span> — <span class="font-semibold text-marea-teal">${e.hours}h</span> per <span class="font-medium text-marea-black">${escapeHtml(e.match?.need?.project?.name) || '—'}</span>`
         })
       })
     }

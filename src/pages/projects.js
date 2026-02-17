@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { loadSkills } from '../components/skill-picker.js'
 
@@ -110,7 +111,7 @@ function renderList() {
     return `
       <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer project-card" data-id="${p.id}">
         <div class="flex items-start justify-between gap-3 mb-3">
-          <h3 class="font-semibold text-marea-black text-base">${p.name}</h3>
+          <h3 class="font-semibold text-marea-black text-base">${escapeHtml(p.name)}</h3>
           <div class="flex items-center gap-1.5 flex-shrink-0">
             <span class="badge ${p.type === 'onda_project' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}">
               ${p.type === 'onda_project' ? 'Onda' : 'Fondazione'}
@@ -120,7 +121,7 @@ function renderList() {
             </span>
           </div>
         </div>
-        ${p.description ? `<p class="text-sm text-marea-gray line-clamp-2 mb-3">${p.description}</p>` : ''}
+        ${p.description ? `<p class="text-sm text-marea-gray line-clamp-2 mb-3">${escapeHtml(p.description)}</p>` : ''}
         <div class="flex items-center gap-2 text-xs text-marea-gray pt-3 border-t border-marea-border/40">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           ${totalNeeds > 0 ? `${openNeeds}/${totalNeeds} esigenze aperte` : 'Nessuna esigenza'}
@@ -151,7 +152,7 @@ function openProjectForm(project = null) {
     <form id="project-form" class="space-y-5">
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Nome progetto *</label>
-        <input type="text" name="name" required value="${project?.name || ''}"
+        <input type="text" name="name" required value="${escapeHtml(project?.name)}"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
       </div>
       <div class="grid grid-cols-2 gap-4">
@@ -173,7 +174,7 @@ function openProjectForm(project = null) {
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Descrizione</label>
-        <textarea name="description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">${project?.description || ''}</textarea>
+        <textarea name="description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">${escapeHtml(project?.description)}</textarea>
       </div>
       <div class="flex items-center justify-between pt-3 border-t border-marea-border/60">
         <div>
@@ -214,7 +215,8 @@ function openProjectForm(project = null) {
       closeModal()
       await loadProjects()
     } catch (err) {
-      alert('Errore: ' + err.message)
+      console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
     }
   })
 
@@ -226,7 +228,8 @@ function openProjectForm(project = null) {
         closeModal()
         await loadProjects()
       } catch (err) {
-        alert('Errore: ' + err.message)
+        console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
       }
     })
   }
@@ -245,7 +248,7 @@ function openProjectDetail(project) {
           ${statusLabel(project.status)}
         </span>
       </div>
-      ${project.description ? `<p class="text-sm text-marea-gray leading-relaxed">${project.description}</p>` : ''}
+      ${project.description ? `<p class="text-sm text-marea-gray leading-relaxed">${escapeHtml(project.description)}</p>` : ''}
 
       <div class="flex items-center justify-between pt-2">
         <h3 class="font-semibold text-marea-black">Esigenze</h3>
@@ -257,11 +260,11 @@ function openProjectDetail(project) {
           <div class="flex items-start justify-between gap-2 p-4 rounded-xl border border-marea-border/60 bg-marea-cream/50">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-sm font-medium text-marea-black">${n.skill?.name || '—'}</span>
+                <span class="text-sm font-medium text-marea-black">${escapeHtml(n.skill?.name) || '—'}</span>
                 <span class="badge ${urgencyBadge(n.urgency)}">${urgencyLabel(n.urgency)}</span>
                 <span class="badge ${needStatusBadge(n.status)}">${needStatusLabel(n.status)}</span>
               </div>
-              ${n.description ? `<p class="text-xs text-marea-gray mt-1">${n.description}</p>` : ''}
+              ${n.description ? `<p class="text-xs text-marea-gray mt-1">${escapeHtml(n.description)}</p>` : ''}
               ${n.hours_needed ? `<p class="text-xs text-marea-gray mt-1">${n.hours_needed} ore richieste</p>` : ''}
             </div>
             <button class="need-delete text-marea-gray hover:text-red-500 text-xs transition-colors" data-need-id="${n.id}">Elimina</button>
@@ -276,7 +279,7 @@ function openProjectDetail(project) {
     </div>
   `
 
-  showModal(renderModal({ title: project.name, content }))
+  showModal(renderModal({ title: escapeHtml(project.name), content }))
 
   document.getElementById('edit-project-btn')?.addEventListener('click', () => {
     closeModal()
@@ -299,7 +302,8 @@ function openProjectDetail(project) {
         const updatedProject = allProjects.find(p => p.id === project.id)
         if (updatedProject) openProjectDetail(updatedProject)
       } catch (err) {
-        alert('Errore: ' + err.message)
+        console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
       }
     })
   })
@@ -312,7 +316,7 @@ function openNeedForm(project) {
         <label class="block text-sm font-medium text-marea-black mb-1.5">Competenza richiesta *</label>
         <select name="skill_id" required class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
           <option value="">Seleziona...</option>
-          ${allSkills.map(s => `<option value="${s.id}">${s.name}${s.category ? ` (${s.category})` : ''}</option>`).join('')}
+          ${allSkills.map(s => `<option value="${s.id}">${escapeHtml(s.name)}${s.category ? ` (${escapeHtml(s.category)})` : ''}</option>`).join('')}
         </select>
       </div>
       <div>
@@ -342,7 +346,7 @@ function openNeedForm(project) {
     </form>
   `
 
-  showModal(renderModal({ title: `Nuova esigenza — ${project.name}`, content }))
+  showModal(renderModal({ title: `Nuova esigenza — ${escapeHtml(project.name)}`, content }))
 
   document.getElementById('need-form').addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -363,7 +367,8 @@ function openNeedForm(project) {
       const updatedProject = allProjects.find(p => p.id === project.id)
       if (updatedProject) openProjectDetail(updatedProject)
     } catch (err) {
-      alert('Errore: ' + err.message)
+      console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
     }
   })
 }
