@@ -196,7 +196,7 @@ export async function initDashboard() {
 
     const { data: recentEntries } = await supabase
       .from('time_entries')
-      .select('id, hours, date, description, match:matches(pioniere:pionieri(full_name), need:project_needs(project:projects(name)))')
+      .select('id, hours, date, description, match:matches(pioniere:pionieri(full_name), need:project_needs(project:projects(name))), pioniere:pionieri(full_name), project:projects(name)')
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -216,9 +216,11 @@ export async function initDashboard() {
 
     if (recentEntries?.length) {
       recentEntries.forEach(e => {
+        const pioniereName = e.match?.pioniere?.full_name || e.pioniere?.full_name
+        const projectName = e.match?.need?.project?.name || e.project?.name
         activities.push({
           date: e.date,
-          html: `<span class="font-medium text-marea-black">${escapeHtml(e.match?.pioniere?.full_name) || '—'}</span> — <span class="font-semibold text-marea-teal">${e.hours}h</span> per <span class="font-medium text-marea-black">${escapeHtml(e.match?.need?.project?.name) || '—'}</span>`
+          html: `<span class="font-medium text-marea-black">${escapeHtml(pioniereName) || '—'}</span> — <span class="font-semibold text-marea-teal">${e.hours}h</span> per <span class="font-medium text-marea-black">${escapeHtml(projectName) || '—'}</span>`
         })
       })
     }
