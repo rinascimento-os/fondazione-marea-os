@@ -137,6 +137,17 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
         alert('Il file sembra vuoto o non valido.')
         return
       }
+      // Skip title/subtitle rows: if a row has fewer than half its cells non-empty, it's not the header row
+      const totalCols = parsedData[0].length
+      while (parsedData.length > 1) {
+        const nonEmpty = parsedData[0].filter(c => c.trim()).length
+        if (nonEmpty >= totalCols / 2) break
+        parsedData.shift()
+      }
+      if (parsedData.length < 2) {
+        alert('Il file sembra vuoto o non valido.')
+        return
+      }
       renderMappingStep()
     }
     reader.readAsText(file)
