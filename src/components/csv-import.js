@@ -149,7 +149,10 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
     const fieldOptions = [
       { value: '', label: '\u2014 Ignora \u2014' },
       { value: 'full_name', label: 'Nome completo' },
+      { value: 'first_name', label: 'Nome' },
+      { value: 'last_name', label: 'Cognome' },
       { value: 'email', label: 'Email' },
+      { value: 'company', label: 'Azienda' },
       { value: 'location', label: 'Localit\u00e0' },
       { value: 'bio', label: 'Ruolo / Bio' },
       { value: 'origin', label: 'Origine siciliana' },
@@ -158,10 +161,24 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
 
     // Auto-detect column mapping
     const autoMap = {}
+    // First pass: check if we have separate nome/cognome columns
+    const hasNome = headers.some(h => {
+      const hl = h.toLowerCase().trim()
+      return hl === 'nome' || hl === 'first name' || hl === 'first_name'
+    })
+    const hasCognome = headers.some(h => {
+      const hl = h.toLowerCase().trim()
+      return hl === 'cognome' || hl === 'last name' || hl === 'last_name' || hl === 'surname'
+    })
+    const useSplitName = hasNome && hasCognome
+
     headers.forEach((h, i) => {
       const hl = h.toLowerCase().trim()
-      if (hl.includes('nome') || hl.includes('name') || hl === 'person') autoMap[i] = 'full_name'
+      if (useSplitName && (hl === 'nome' || hl === 'first name' || hl === 'first_name')) autoMap[i] = 'first_name'
+      else if (useSplitName && (hl === 'cognome' || hl === 'last name' || hl === 'last_name' || hl === 'surname')) autoMap[i] = 'last_name'
+      else if (hl.includes('nome') || hl.includes('name') || hl === 'person') autoMap[i] = 'full_name'
       else if (hl.includes('email') || hl.includes('e-mail') || hl.includes('mail')) autoMap[i] = 'email'
+      else if (hl.includes('azienda') || hl.includes('company') || hl.includes('ente') || hl.includes('organizzazione')) autoMap[i] = 'company'
       else if (hl.includes('citt') || hl.includes('city') || hl.includes('location') || hl.includes('luogo') || hl.includes('sede')) autoMap[i] = 'location'
       else if (hl.includes('ruolo') || hl.includes('role') || hl.includes('bio') || hl.includes('descri') || hl.includes('job') || hl.includes('professione') || hl.includes('titolo')) autoMap[i] = 'bio'
       else if (hl.includes('origin') || hl.includes('sicilian')) autoMap[i] = 'origin'
@@ -213,8 +230,11 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
         if (sel.value) columnMapping[sel.dataset.col] = sel.value
       })
 
-      if (!Object.values(columnMapping).includes('full_name')) {
-        alert('Devi mappare almeno la colonna "Nome completo".')
+      const mappedFields = Object.values(columnMapping)
+      const hasFullName = mappedFields.includes('full_name')
+      const hasFirstLast = mappedFields.includes('first_name') && mappedFields.includes('last_name')
+      if (!hasFullName && !hasFirstLast) {
+        alert('Devi mappare almeno "Nome completo" oppure sia "Nome" che "Cognome".')
         return
       }
 
@@ -226,12 +246,21 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
     const dataRows = parsedData.slice(1).filter(row => row.some(cell => cell.trim()))
 
     importRows = dataRows.map(row => {
-      const record = { full_name: '', email: '', location: '', bio: '', availability: '', _origin: '' }
+      const record = { full_name: '', email: '', company: '', location: '', bio: '', availability: '', _origin: '', _first_name: '', _last_name: '' }
       for (const [colIdx, field] of Object.entries(columnMapping)) {
         const val = row[parseInt(colIdx)] || ''
         if (field === 'origin') record._origin = val
+        else if (field === 'first_name') record._first_name = val
+        else if (field === 'last_name') record._last_name = val
         else record[field] = val
       }
+
+      // Combine first + last name if mapped separately
+      if (record._first_name || record._last_name) {
+        record.full_name = `${record._first_name} ${record._last_name}`.trim()
+      }
+      delete record._first_name
+      delete record._last_name
 
       // Append origin to bio
       if (record._origin) {
@@ -275,7 +304,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
                 <th class="pb-2 pr-3">Stato</th>
                 <th class="pb-2 pr-3">Nome</th>
                 <th class="pb-2 pr-3">Email</th>
-                <th class="pb-2 pr-3">Localit\u00e0</th>
+                <th class="pb-2 pr-3">Azienda</th>
                 <th class="pb-2 pr-3">Ruolo / Bio</th>
                 <th class="pb-2">Competenze suggerite</th>
               </tr>
@@ -290,7 +319,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
                   </td>
                   <td class="py-2.5 pr-3 font-medium text-marea-black whitespace-nowrap">${r.full_name}</td>
                   <td class="py-2.5 pr-3 text-marea-gray text-xs">${r.email || '\u2014'}</td>
-                  <td class="py-2.5 pr-3 text-marea-gray text-xs">${r.location || '\u2014'}</td>
+                  <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[160px] truncate" title="${(r.company || '').replace(/"/g, '&quot;')}">${r.company || '\u2014'}</td>
                   <td class="py-2.5 pr-3 text-marea-gray text-xs max-w-[200px] truncate" title="${(r.bio || '').replace(/"/g, '&quot;')}">${r.bio || '\u2014'}</td>
                   <td class="py-2.5">
                     <div class="flex flex-wrap gap-1" id="csv-skills-${idx}">
@@ -346,6 +375,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
       const record = {
         full_name: row.full_name,
         email: row.email || null,
+        company: row.company || null,
         location: row.location || null,
         bio: row.bio || null,
         availability: row.availability || null,
@@ -355,7 +385,12 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
       try {
         let pioniereId
         if (row._isDuplicate && row._existing) {
-          const { error } = await supabase.from('pionieri').update(record).eq('id', row._existing.id)
+          // Only overwrite fields that have actual values in the CSV — preserve existing data for empty cells
+          const updateRecord = { updated_at: record.updated_at }
+          for (const key of ['full_name', 'email', 'company', 'location', 'bio', 'availability']) {
+            if (record[key]) updateRecord[key] = record[key]
+          }
+          const { error } = await supabase.from('pionieri').update(updateRecord).eq('id', row._existing.id)
           if (error) throw error
           pioniereId = row._existing.id
           updated++
