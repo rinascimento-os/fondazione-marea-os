@@ -80,6 +80,7 @@ export function renderLayout(contentHtml, currentHash) {
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
           <h1 class="text-2xl font-bold text-marea-black">${activeItem.label}</h1>
+          <div id="page-actions" class="ml-auto flex flex-wrap gap-3"></div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 lg:p-8">
