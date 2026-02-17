@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/skill-picker.js'
 import { openCsvImport } from '../components/csv-import.js'
@@ -104,20 +105,20 @@ function renderList(filter = '') {
     <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer pioniere-card" data-id="${p.id}">
       <div class="flex items-start gap-4">
         <div class="w-11 h-11 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-          <span class="text-marea-teal font-bold text-sm">${getInitials(p.full_name)}</span>
+          <span class="text-marea-teal font-bold text-sm">${escapeHtml(getInitials(p.full_name))}</span>
         </div>
         <div class="flex-1 min-w-0">
-          <h3 class="font-semibold text-marea-black text-base">${p.full_name}</h3>
+          <h3 class="font-semibold text-marea-black text-base">${escapeHtml(p.full_name)}</h3>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-marea-gray">
-            ${p.company ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>${p.company}</span>` : ''}
-            ${p.location ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${p.location}</span>` : ''}
-            ${p.email ? `<span class="truncate">${p.email}</span>` : ''}
-            ${p.availability ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${p.availability}</span>` : ''}
+            ${p.company ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>${escapeHtml(p.company)}</span>` : ''}
+            ${p.location ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${escapeHtml(p.location)}</span>` : ''}
+            ${p.email ? `<span class="truncate">${escapeHtml(p.email)}</span>` : ''}
+            ${p.availability ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${escapeHtml(p.availability)}</span>` : ''}
           </div>
           ${(p.pioniere_skills || []).length > 0 ? `
             <div class="flex flex-wrap gap-1.5 mt-3">
               ${(p.pioniere_skills || []).map(ps => `
-                <span class="badge bg-marea-teal-light text-marea-teal">${ps.skill?.name || '—'}</span>
+                <span class="badge bg-marea-teal-light text-marea-teal">${escapeHtml(ps.skill?.name) || '—'}</span>
               `).join('')}
             </div>
           ` : ''}
@@ -147,34 +148,34 @@ function openPioniereForm(pioniere = null) {
     <form id="pioniere-form" class="space-y-5">
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Nome completo *</label>
-        <input type="text" name="full_name" required value="${pioniere?.full_name || ''}"
+        <input type="text" name="full_name" required value="${escapeHtml(pioniere?.full_name)}"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Email</label>
-        <input type="email" name="email" value="${pioniere?.email || ''}"
+        <input type="email" name="email" value="${escapeHtml(pioniere?.email)}"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Azienda / Ente</label>
-        <input type="text" name="company" value="${pioniere?.company || ''}" placeholder="es. Google, Università di Catania"
+        <input type="text" name="company" value="${escapeHtml(pioniere?.company)}" placeholder="es. Google, Università di Catania"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-marea-black mb-1.5">Luogo</label>
-          <input type="text" name="location" value="${pioniere?.location || ''}" placeholder="es. San Francisco"
+          <input type="text" name="location" value="${escapeHtml(pioniere?.location)}" placeholder="es. San Francisco"
                  class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
         </div>
         <div>
           <label class="block text-sm font-medium text-marea-black mb-1.5">Disponibilit&agrave;</label>
-          <input type="text" name="availability" value="${pioniere?.availability || ''}" placeholder="es. 5 ore/mese"
+          <input type="text" name="availability" value="${escapeHtml(pioniere?.availability)}" placeholder="es. 5 ore/mese"
                  class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
         </div>
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Bio</label>
-        <textarea name="bio" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">${pioniere?.bio || ''}</textarea>
+        <textarea name="bio" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">${escapeHtml(pioniere?.bio)}</textarea>
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Competenze</label>
@@ -243,7 +244,8 @@ function openPioniereForm(pioniere = null) {
       closeModal()
       await loadPionieri()
     } catch (err) {
-      alert('Errore nel salvataggio: ' + err.message)
+      console.error('Errore nel salvataggio:', err)
+      alert('Si è verificato un errore. Riprova.')
     }
   })
 
@@ -255,7 +257,8 @@ function openPioniereForm(pioniere = null) {
         closeModal()
         await loadPionieri()
       } catch (err) {
-        alert('Errore nell\'eliminazione: ' + err.message)
+        console.error('Errore nell\'eliminazione:', err)
+        alert('Si è verificato un errore. Riprova.')
       }
     })
   }

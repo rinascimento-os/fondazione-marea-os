@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 
 export async function loadSkills() {
   const { data, error } = await supabase.from('skills').select('*').order('category').order('name')
@@ -12,7 +13,7 @@ export function renderSkillPicker({ selectedSkills = [], inputId = 'skill-picker
       <div id="${inputId}-tags" class="flex flex-wrap gap-2">
         ${selectedSkills.map(s => `
           <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-marea-teal-light text-marea-teal" data-skill-id="${s.id}">
-            ${s.name}
+            ${escapeHtml(s.name)}
             <button type="button" class="skill-remove hover:text-red-500" data-remove-skill="${s.id}">&times;</button>
           </span>
         `).join('')}
@@ -45,7 +46,7 @@ export function initSkillPicker({ inputId = 'skill-picker', skills = [], selecte
     if (available.length === 0 && filter.trim()) {
       dropdown.innerHTML = `
         <button type="button" class="w-full text-left px-3 py-2 text-sm text-marea-teal hover:bg-marea-light skill-create">
-          + Crea "${filter.trim()}"
+          + Crea "${escapeHtml(filter.trim())}"
         </button>
       `
       dropdown.classList.remove('hidden')
@@ -63,8 +64,8 @@ export function initSkillPicker({ inputId = 'skill-picker', skills = [], selecte
     } else {
       dropdown.innerHTML = available.map(s => `
         <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-marea-light skill-option" data-skill-id="${s.id}">
-          <span class="font-medium">${s.name}</span>
-          ${s.category ? `<span class="text-marea-gray ml-1">· ${s.category}</span>` : ''}
+          <span class="font-medium">${escapeHtml(s.name)}</span>
+          ${s.category ? `<span class="text-marea-gray ml-1">· ${escapeHtml(s.category)}</span>` : ''}
         </button>
       `).join('')
       dropdown.classList.remove('hidden')
@@ -97,7 +98,7 @@ export function initSkillPicker({ inputId = 'skill-picker', skills = [], selecte
   function renderTags() {
     tagsContainer.innerHTML = selected.map(s => `
       <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-marea-teal-light text-marea-teal" data-skill-id="${s.id}">
-        ${s.name}
+        ${escapeHtml(s.name)}
         <button type="button" class="skill-remove hover:text-red-500" data-remove-skill="${s.id}">&times;</button>
       </span>
     `).join('')

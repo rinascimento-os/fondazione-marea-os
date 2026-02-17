@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 
 let openNeeds = []
@@ -179,12 +180,12 @@ function renderNeedsList() {
     <div class="need-card bg-white rounded-xl border border-marea-border/60 p-5 cursor-pointer card-hover ${selectedNeed?.id === n.id ? 'ring-2 ring-marea-teal border-marea-teal' : ''}" data-need-id="${n.id}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1">
-          <p class="font-semibold text-sm text-marea-black">${n.project?.name || '—'}</p>
+          <p class="font-semibold text-sm text-marea-black">${escapeHtml(n.project?.name) || '—'}</p>
           <div class="flex items-center gap-2 mt-1.5">
-            <span class="badge bg-marea-teal-light text-marea-teal">${n.skill?.name || '—'}</span>
+            <span class="badge bg-marea-teal-light text-marea-teal">${escapeHtml(n.skill?.name) || '—'}</span>
             ${n.hours_needed ? `<span class="text-xs text-marea-gray">${n.hours_needed} ore</span>` : ''}
           </div>
-          ${n.description ? `<p class="text-xs text-marea-gray mt-2 leading-relaxed">${n.description}</p>` : ''}
+          ${n.description ? `<p class="text-xs text-marea-gray mt-2 leading-relaxed">${escapeHtml(n.description)}</p>` : ''}
         </div>
         <span class="badge ${urgencyBadge(n.urgency)}">${urgencyLabel(n.urgency)}</span>
       </div>
@@ -241,14 +242,14 @@ function renderPionieriList() {
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-3">
           <div class="w-9 h-9 rounded-full ${isMatch ? 'bg-marea-teal/10' : 'bg-marea-warm-gray'} flex items-center justify-center flex-shrink-0">
-            <span class="${isMatch ? 'text-marea-teal' : 'text-marea-gray'} font-bold text-xs">${getInitials(p.full_name)}</span>
+            <span class="${isMatch ? 'text-marea-teal' : 'text-marea-gray'} font-bold text-xs">${escapeHtml(getInitials(p.full_name))}</span>
           </div>
           <div>
-            <p class="font-semibold text-sm text-marea-black">${p.full_name}</p>
-            <p class="text-xs text-marea-gray mt-0.5">${p.location || ''} ${p.availability ? '· ' + p.availability : ''}</p>
+            <p class="font-semibold text-sm text-marea-black">${escapeHtml(p.full_name)}</p>
+            <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(p.location) || ''} ${p.availability ? '· ' + escapeHtml(p.availability) : ''}</p>
             <div class="flex flex-wrap gap-1 mt-2">
               ${(p.pioniere_skills || []).map(ps => `
-                <span class="badge ${ps.skill_id === skillId ? 'bg-marea-teal text-white' : 'bg-marea-teal-light text-marea-teal'}">${ps.skill?.name || ''}</span>
+                <span class="badge ${ps.skill_id === skillId ? 'bg-marea-teal text-white' : 'bg-marea-teal-light text-marea-teal'}">${escapeHtml(ps.skill?.name) || ''}</span>
               `).join('')}
             </div>
           </div>
@@ -282,13 +283,13 @@ function openCreateMatchModal(pioniere, need) {
       <div class="grid grid-cols-2 gap-4">
         <div class="p-4 rounded-xl bg-marea-teal-light/50 border border-marea-teal/10">
           <p class="text-xs text-marea-gray mb-1.5 uppercase tracking-wide">Pioniere</p>
-          <p class="font-semibold text-sm text-marea-black">${pioniere.full_name}</p>
-          <p class="text-xs text-marea-gray mt-0.5">${pioniere.location || ''}</p>
+          <p class="font-semibold text-sm text-marea-black">${escapeHtml(pioniere.full_name)}</p>
+          <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(pioniere.location) || ''}</p>
         </div>
         <div class="p-4 rounded-xl bg-amber-50/50 border border-amber-200/30">
           <p class="text-xs text-marea-gray mb-1.5 uppercase tracking-wide">Esigenza</p>
-          <p class="font-semibold text-sm text-marea-black">${need.project?.name || ''}</p>
-          <p class="text-xs text-marea-gray mt-0.5">${need.skill?.name || ''} · ${need.hours_needed ? need.hours_needed + ' ore' : ''}</p>
+          <p class="font-semibold text-sm text-marea-black">${escapeHtml(need.project?.name) || ''}</p>
+          <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(need.skill?.name) || ''} · ${need.hours_needed ? need.hours_needed + ' ore' : ''}</p>
         </div>
       </div>
       <form id="create-match-form">
@@ -327,7 +328,8 @@ function openCreateMatchModal(pioniere, need) {
       await Promise.all([loadOpenNeeds(), loadMatches()])
       renderPionieriList()
     } catch (err) {
-      alert('Errore: ' + err.message)
+      console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
     }
   })
 }
@@ -365,14 +367,14 @@ function renderMatchesList() {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1.5">
             <div class="w-7 h-7 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-              <span class="text-marea-teal font-bold text-[10px]">${getInitials(m.pioniere?.full_name)}</span>
+              <span class="text-marea-teal font-bold text-[10px]">${escapeHtml(getInitials(m.pioniere?.full_name))}</span>
             </div>
-            <span class="font-semibold text-marea-black text-sm">${m.pioniere?.full_name || '—'}</span>
+            <span class="font-semibold text-marea-black text-sm">${escapeHtml(m.pioniere?.full_name) || '—'}</span>
             <svg class="w-4 h-4 text-marea-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-            <span class="font-semibold text-marea-black text-sm">${m.need?.project?.name || '—'}</span>
+            <span class="font-semibold text-marea-black text-sm">${escapeHtml(m.need?.project?.name) || '—'}</span>
           </div>
-          <p class="text-sm text-marea-gray ml-9">${m.need?.skill?.name || ''} ${m.need?.description ? '· ' + m.need.description : ''}</p>
-          ${m.notes ? `<p class="text-xs text-marea-gray/70 mt-1 ml-9 italic">${m.notes}</p>` : ''}
+          <p class="text-sm text-marea-gray ml-9">${escapeHtml(m.need?.skill?.name) || ''} ${m.need?.description ? '· ' + escapeHtml(m.need.description) : ''}</p>
+          ${m.notes ? `<p class="text-xs text-marea-gray/70 mt-1 ml-9 italic">${escapeHtml(m.notes)}</p>` : ''}
         </div>
         <div class="flex items-center gap-3 ml-9 sm:ml-0">
           <select class="match-status-select px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${m.id}">
@@ -403,7 +405,8 @@ function renderMatchesList() {
 
         await loadMatches()
       } catch (err) {
-        alert('Errore: ' + err.message)
+        console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
       }
     })
   })
@@ -419,7 +422,8 @@ function renderMatchesList() {
         await supabase.from('matches').delete().eq('id', btn.dataset.matchId)
         await Promise.all([loadMatches(), loadOpenNeeds()])
       } catch (err) {
-        alert('Errore: ' + err.message)
+        console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
       }
     })
   })

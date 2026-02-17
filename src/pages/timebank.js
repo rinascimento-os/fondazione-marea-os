@@ -1,4 +1,5 @@
 import { supabase } from '../supabase.js'
+import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSearchableSelect, initSearchableSelect } from '../components/searchable-select.js'
 
@@ -219,15 +220,15 @@ function renderEntries() {
     return `
     <tr class="border-b border-marea-border/40 last:border-0 table-row-hover transition-colors">
       <td class="px-5 py-4 whitespace-nowrap text-marea-gray">${formatDate(e.date)}</td>
-      <td class="px-5 py-4 font-medium text-marea-black">${pioniere?.full_name || '—'}</td>
+      <td class="px-5 py-4 font-medium text-marea-black">${escapeHtml(pioniere?.full_name) || '—'}</td>
       <td class="px-5 py-4 text-marea-gray">
-        ${project?.name || '—'}
+        ${escapeHtml(project?.name) || '—'}
         ${isDirectEntry ? '<span class="ml-1.5 text-[10px] font-medium text-marea-gray/50 uppercase tracking-wide">diretto</span>' : ''}
       </td>
       <td class="px-5 py-4">
         <span class="badge bg-marea-teal-light text-marea-teal font-semibold">${e.hours}h</span>
       </td>
-      <td class="px-5 py-4 text-marea-gray max-w-xs truncate">${e.description || '—'}</td>
+      <td class="px-5 py-4 text-marea-gray max-w-xs truncate">${escapeHtml(e.description) || '—'}</td>
       <td class="px-5 py-4">
         <button class="entry-delete text-marea-gray hover:text-red-500 transition-colors" data-entry-id="${e.id}">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -243,7 +244,8 @@ function renderEntries() {
         await supabase.from('time_entries').delete().eq('id', btn.dataset.entryId)
         await loadEntries()
       } catch (err) {
-        alert('Errore: ' + err.message)
+        console.error('Errore:', err)
+        alert('Si è verificato un errore. Riprova.')
       }
     })
   })
@@ -393,7 +395,8 @@ function openLogHoursForm() {
       closeModal()
       await loadEntries()
     } catch (err) {
-      alert('Errore: ' + err.message)
+      console.error('Errore:', err)
+      alert('Si è verificato un errore. Riprova.')
     }
   })
 }
