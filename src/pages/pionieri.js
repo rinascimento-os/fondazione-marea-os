@@ -3,6 +3,7 @@ import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/skill-picker.js'
 import { openCsvImport } from '../components/csv-import.js'
+import { initDeleteConfirm, showAlert } from '../utils/confirm-delete.js'
 
 let allPionieri = []
 let allSkills = []
@@ -12,7 +13,7 @@ export function renderPionieri() {
     <div>
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div class="flex items-center gap-3 flex-1 max-w-md">
-          <span id="pionieri-count" class="text-sm font-semibold text-marea-navy bg-marea-navy/10 px-3 py-1.5 rounded-full whitespace-nowrap"></span>
+          <span id="pionieri-count" class="text-sm font-semibold text-marea-navy bg-marea-navy/10 px-3 py-1.5 rounded-full whitespace-nowrap"><svg class="w-4 h-4 animate-spin text-marea-navy/40" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></span>
           <div class="relative flex-1">
           <input type="text" id="pionieri-search" placeholder="Cerca per nome, luogo o competenza..."
                  class="w-full pl-10 pr-4 py-3 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all" />
@@ -98,7 +99,7 @@ function renderList(filter = '') {
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div class="text-center py-16">
+      <div class="text-center py-16" style="column-span: all">
         <svg class="w-12 h-12 text-marea-border mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         <p class="text-marea-gray mb-2">${filter ? 'Nessun risultato trovato.' : 'Nessun Pioniere ancora registrato.'}</p>
         ${!filter ? '<p class="text-sm text-marea-gray/60">Clicca "Aggiungi Pioniere" per iniziare.</p>' : ''}
@@ -108,7 +109,7 @@ function renderList(filter = '') {
   }
 
   container.innerHTML = filtered.map(p => `
-    <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer pioniere-card" data-id="${p.id}">
+    <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer pioniere-card break-inside-avoid" data-id="${p.id}">
       <div class="flex items-start gap-4">
         <div class="w-11 h-11 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
           <span class="text-marea-teal font-bold text-sm">${escapeHtml(getInitials(p.full_name))}</span>
@@ -140,39 +141,6 @@ function renderList(filter = '') {
   })
 }
 
-function initDeleteConfirm(btnId, name, onConfirm) {
-  const btn = document.getElementById(btnId)
-  if (!btn) return
-
-  btn.addEventListener('click', () => {
-    const confirmEl = document.createElement('div')
-    confirmEl.id = 'confirm-container'
-    confirmEl.innerHTML = `
-      <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="confirm-overlay"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 text-center">
-          <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
-            <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </div>
-          <p class="text-lg font-bold text-marea-black mb-1">Eliminare ${escapeHtml(name)}?</p>
-          <p class="text-sm text-marea-gray mb-6">Questa azione non pu&ograve; essere annullata.</p>
-          <div class="flex justify-center gap-3">
-            <button id="confirm-cancel" class="btn-outline py-2.5 px-6">Annulla</button>
-            <button id="confirm-delete" class="inline-flex items-center gap-2 py-2.5 px-6 rounded-full text-sm font-semibold bg-orange-500 text-white hover:brightness-110 transition-all">Elimina</button>
-          </div>
-        </div>
-      </div>
-    `
-    document.body.appendChild(confirmEl)
-
-    document.getElementById('confirm-cancel').addEventListener('click', () => confirmEl.remove())
-    document.getElementById('confirm-overlay').addEventListener('click', () => confirmEl.remove())
-    document.getElementById('confirm-delete').addEventListener('click', async () => {
-      confirmEl.remove()
-      await onConfirm()
-    })
-  })
-}
 
 function getInitials(name) {
   if (!name) return '?'
@@ -257,7 +225,7 @@ function openPioniereDetail(pioniere) {
       ` : ''}
     </div>
 
-    <div class="flex items-center justify-end gap-3 pt-4 pb-1 px-6 mt-6 border-t border-marea-border/60 sticky bottom-0 bg-white">
+    <div class="flex items-center justify-end gap-3 pt-4 pb-1 mt-6 border-t border-marea-border/60 sticky bottom-0 bg-white">
       <button type="button" id="delete-pioniere-btn" class="inline-flex items-center gap-2 py-2.5 px-6 rounded-full text-sm font-semibold bg-orange-500 text-white hover:brightness-110 transition-all">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         Elimina
@@ -298,7 +266,7 @@ function openPioniereDetail(pioniere) {
       await loadPionieri()
     } catch (err) {
       console.error('Errore nell\'eliminazione:', err)
-      alert('Si \u00e8 verificato un errore. Riprova.')
+      showAlert('Si è verificato un errore. Riprova.')
     }
   })
 }
@@ -348,7 +316,7 @@ function openPioniereForm(pioniere = null) {
       <div class="grid grid-cols-2 gap-6">
         <div>
           <label class="block text-sm font-medium text-marea-black mb-1.5">Genere</label>
-          <select name="gender" class="w-full px-4 pr-10 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px] bg-[right_12px_center] bg-no-repeat">
+          <select name="gender" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
             <option value="">—</option>
             <option value="M" ${pioniere?.gender === 'M' ? 'selected' : ''}>M</option>
             <option value="F" ${pioniere?.gender === 'F' ? 'selected' : ''}>F</option>
@@ -360,7 +328,7 @@ function openPioniereForm(pioniere = null) {
         ${renderSkillPicker({ selectedSkills: currentSkills, inputId: 'pioniere-skills' })}
       </div>
     </form>
-    <div class="flex items-center justify-end gap-3 pt-4 pb-1 px-6 mt-6 border-t border-marea-border/60 sticky bottom-0 bg-white">
+    <div class="flex items-center justify-end gap-3 pt-4 pb-1 mt-6 border-t border-marea-border/60 sticky bottom-0 bg-white">
       ${isEdit ? `<button type="button" id="delete-pioniere-btn" class="inline-flex items-center gap-2 py-2.5 px-6 rounded-full text-sm font-semibold bg-orange-500 text-white hover:brightness-110 transition-all">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         Elimina
@@ -430,7 +398,7 @@ function openPioniereForm(pioniere = null) {
       await loadPionieri()
     } catch (err) {
       console.error('Errore nel salvataggio:', err)
-      alert('Si è verificato un errore. Riprova.')
+      showAlert('Si è verificato un errore. Riprova.')
     }
   })
 
@@ -442,7 +410,7 @@ function openPioniereForm(pioniere = null) {
         await loadPionieri()
       } catch (err) {
         console.error('Errore nell\'eliminazione:', err)
-        alert('Si è verificato un errore. Riprova.')
+        showAlert('Si è verificato un errore. Riprova.')
       }
     })
   }

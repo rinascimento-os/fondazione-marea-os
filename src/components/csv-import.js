@@ -1,5 +1,6 @@
 import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
+import { showAlert } from '../utils/confirm-delete.js'
 
 function detectDelimiter(text) {
   const firstLine = text.split('\n')[0]
@@ -138,7 +139,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
   function handleFile(file) {
     const MAX_CSV_SIZE = 5 * 1024 * 1024 // 5 MB
     if (file.size > MAX_CSV_SIZE) {
-      alert('File troppo grande (max 5 MB)')
+      showAlert('File troppo grande (max 5 MB)')
       return
     }
 
@@ -148,7 +149,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
       const delimiter = detectDelimiter(text)
       parsedData = parseCSV(text, delimiter)
       if (parsedData.length < 2) {
-        alert('Il file sembra vuoto o non valido.')
+        showAlert('Il file sembra vuoto o non valido.')
         return
       }
       // Skip title/subtitle rows: if a row has fewer than half its cells non-empty, it's not the header row
@@ -159,7 +160,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
         parsedData.shift()
       }
       if (parsedData.length < 2) {
-        alert('Il file sembra vuoto o non valido.')
+        showAlert('Il file sembra vuoto o non valido.')
         return
       }
       renderMappingStep()
@@ -246,7 +247,7 @@ export function openCsvImport({ skills, existingPionieri, onComplete }) {
 
       const mappedFields = Object.values(columnMapping)
       if (!mappedFields.includes('first_name') || !mappedFields.includes('last_name')) {
-        alert('Devi mappare almeno "Nome" e "Cognome".')
+        showAlert('Devi mappare almeno "Nome" e "Cognome".')
         return
       }
 

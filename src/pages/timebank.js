@@ -2,6 +2,7 @@ import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSearchableSelect, initSearchableSelect } from '../components/searchable-select.js'
+import { showAlert, showConfirm } from '../utils/confirm-delete.js'
 
 let allEntries = []
 let allMatches = []
@@ -238,15 +239,16 @@ function renderEntries() {
   `}).join('')
 
   tbody.querySelectorAll('.entry-delete').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Eliminare questa registrazione?')) return
-      try {
-        await supabase.from('time_entries').delete().eq('id', btn.dataset.entryId)
-        await loadEntries()
-      } catch (err) {
-        console.error('Errore:', err)
-        alert('Si è verificato un errore. Riprova.')
-      }
+    btn.addEventListener('click', () => {
+      showConfirm('Eliminare questa registrazione?', async () => {
+        try {
+          await supabase.from('time_entries').delete().eq('id', btn.dataset.entryId)
+          await loadEntries()
+        } catch (err) {
+          console.error('Errore:', err)
+          showAlert('Si è verificato un errore. Riprova.')
+        }
+      })
     })
   })
 }
@@ -396,7 +398,7 @@ function openLogHoursForm() {
       await loadEntries()
     } catch (err) {
       console.error('Errore:', err)
-      alert('Si è verificato un errore. Riprova.')
+      showAlert('Si è verificato un errore. Riprova.')
     }
   })
 }

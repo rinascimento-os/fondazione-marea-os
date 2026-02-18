@@ -75,12 +75,18 @@ export function renderLayout(contentHtml, currentHash) {
 
       <!-- Main content -->
       <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="bg-white/80 backdrop-blur-sm border-b border-marea-border px-4 lg:px-8 py-5 flex items-center gap-4 sticky top-0 z-10">
-          <button id="menu-btn" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-overlay').classList.remove('hidden')">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-          </button>
-          <h1 class="text-2xl font-bold text-marea-black">${activeItem.label}</h1>
-          <div id="page-actions" class="ml-auto flex flex-wrap gap-3"></div>
+        <header class="bg-white/80 backdrop-blur-sm border-b border-marea-border px-4 lg:px-8 py-5 sticky top-0 z-10">
+          <div class="flex items-center justify-between max-w-7xl mx-auto">
+            <div class="flex items-center gap-3">
+              <button id="menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-overlay').classList.remove('hidden')">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+              <div id="page-title-area">
+                <h1 class="text-2xl font-bold text-marea-black">${activeItem.label}</h1>
+              </div>
+            </div>
+            <div id="page-actions" class="flex flex-wrap gap-3"></div>
+          </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 lg:p-8">

@@ -1,10 +1,15 @@
 import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
+import { initDeleteConfirm, showAlert } from '../utils/confirm-delete.js'
 
 let allSkills = []
 
-const CATEGORIES = ['Tech', 'Business', 'Creative', 'Operations', 'Altro']
+function getCategories() {
+  const cats = [...new Set(allSkills.map(s => s.category).filter(Boolean))].sort()
+  if (!cats.includes('Altro')) cats.push('Altro')
+  return cats
+}
 
 export function renderSkills() {
   return `
@@ -84,26 +89,25 @@ function renderList(filter = '') {
   }
 
   container.innerHTML = Object.entries(grouped).map(([category, skills]) => `
-    <div class="mb-6">
-      <h3 class="text-sm font-semibold text-marea-gray uppercase tracking-wider mb-3">${escapeHtml(category)}</h3>
+    <div class="mb-10">
+      <h3 class="text-base font-bold text-marea-navy uppercase tracking-wider mb-3">${escapeHtml(category)}</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         ${skills.map(s => `
-          <div class="bg-white rounded-xl border border-marea-border/60 p-4" data-id="${s.id}">
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <h4 class="font-medium text-marea-black text-sm">${escapeHtml(s.name)}</h4>
-                  <span class="badge bg-marea-teal-light text-marea-teal text-xs">${escapeHtml(s.category) || 'Altro'}</span>
+          <div class="bg-white rounded-xl border border-marea-border/60 p-4 flex flex-col" data-id="${s.id}">
+            <h4 class="font-medium text-marea-black text-sm">${escapeHtml(s.name)}</h4>
+            ${s.keywords ? `
+              <div class="mt-2 flex-1">
+                <span class="text-xs text-marea-gray font-medium">Keywords:</span>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  ${s.keywords.split(',').map(k => k.trim()).filter(Boolean).map(k => `
+                    <span class="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-marea-gray">${escapeHtml(k)}</span>
+                  `).join('')}
                 </div>
-                ${s.keywords ? `
-                  <div class="flex flex-wrap gap-1 mt-2">
-                    ${s.keywords.split(',').map(k => k.trim()).filter(Boolean).map(k => `
-                      <span class="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-marea-gray">${escapeHtml(k)}</span>
-                    `).join('')}
-                  </div>
-                ` : '<p class="text-xs text-marea-gray/50 mt-1">Nessuna parola chiave</p>'}
               </div>
-              <button type="button" class="edit-skill-btn w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-teal hover:bg-marea-teal-light transition-all flex-shrink-0" data-id="${s.id}" title="Modifica">
+            ` : '<p class="text-xs text-marea-gray/50 mt-1 flex-1">Nessuna parola chiave</p>'}
+            <div class="mt-3 pt-2 border-t border-marea-border/40 flex items-center justify-between">
+              <span class="badge bg-marea-teal-light text-marea-teal text-xs">${escapeHtml(s.category) || 'Altro'}</span>
+              <button type="button" class="edit-skill-btn w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-navy hover:bg-marea-yellow transition-all" data-id="${s.id}" title="Modifica">
                 <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
             </div>
@@ -135,7 +139,7 @@ function openSkillForm(skill = null) {
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Categoria</label>
         <select name="category" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
-          ${CATEGORIES.map(c => `<option value="${c}" ${skill?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+          ${getCategories().map(c => `<option value="${c}" ${skill?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
         </select>
       </div>
       <div>
@@ -145,18 +149,16 @@ function openSkillForm(skill = null) {
                placeholder="es. ux, user experience, usabilit\u00e0" />
         <p class="text-xs text-marea-gray mt-1">Separate da virgola. Usate per suggerire questa competenza durante l'importazione CSV in base al ruolo.</p>
       </div>
-      <div class="flex items-center justify-between pt-3 border-t border-marea-border/60">
-        <div>
-          ${isEdit ? `<button type="button" id="delete-skill-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina</button>` : ''}
-        </div>
-        <div class="flex gap-3">
-          <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
-          <button type="submit" class="btn-gold py-2 px-5">
-            ${isEdit ? 'Salva modifiche' : 'Aggiungi'}
-          </button>
-        </div>
-      </div>
     </form>
+    <div class="flex items-center justify-end gap-3 pt-4 pb-1 mt-6 border-t border-marea-border/60 sticky bottom-0 bg-white">
+      ${isEdit ? `<button type="button" id="delete-skill-btn" class="inline-flex items-center gap-2 py-2.5 px-6 rounded-full text-sm font-semibold bg-orange-500 text-white hover:brightness-110 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        Elimina
+      </button>` : ''}
+      <button type="submit" form="skill-form" class="btn-gold py-2.5 px-6">
+        ${isEdit ? 'Salva modifiche' : 'Aggiungi'}
+      </button>
+    </div>
   `
 
   showModal(renderModal({
@@ -168,8 +170,15 @@ function openSkillForm(skill = null) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     const fd = new FormData(form)
+    const name = fd.get('name').trim()
+    const duplicate = allSkills.find(s => s.name.toLowerCase() === name.toLowerCase() && (!isEdit || s.id !== skill.id))
+    if (duplicate) {
+      showAlert(`Esiste già una competenza con il nome "${duplicate.name}".`)
+      return
+    }
+
     const record = {
-      name: fd.get('name'),
+      name,
       category: fd.get('category') || 'Altro',
       keywords: fd.get('keywords') || null,
     }
@@ -186,20 +195,19 @@ function openSkillForm(skill = null) {
       await loadSkillsList()
     } catch (err) {
       console.error('Errore:', err)
-      alert('Si è verificato un errore. Riprova.')
+      showAlert('Si è verificato un errore. Riprova.')
     }
   })
 
   if (isEdit) {
-    document.getElementById('delete-skill-btn')?.addEventListener('click', async () => {
-      if (!confirm('Sei sicuro di voler eliminare questa competenza? Verr\u00e0 rimossa anche da tutti i Pionieri associati.')) return
+    initDeleteConfirm('delete-skill-btn', skill.name, async () => {
       try {
         await supabase.from('skills').delete().eq('id', skill.id)
         closeModal()
         await loadSkillsList()
       } catch (err) {
         console.error('Errore:', err)
-      alert('Si è verificato un errore. Riprova.')
+        showAlert('Si è verificato un errore. Riprova.')
       }
     })
   }

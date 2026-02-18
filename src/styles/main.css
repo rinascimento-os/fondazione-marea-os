@@ -37,6 +37,16 @@ h4, h5, h6 {
   font-weight: 600;
 }
 
+/* Select dropdown chevron */
+select {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E');
+  background-size: 12px;
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
@@ -53,6 +63,32 @@ h4, h5, h6 {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a49d;
+}
+
+/* Hidden scrollbar — scroll with trackpad/wheel */
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scroll fade hint at bottom */
+.scroll-fade {
+  position: relative;
+}
+
+.scroll-fade::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: block;
+  height: 32px;
+  background: linear-gradient(to top, var(--color-marea-cream), transparent);
+  pointer-events: none;
 }
 
 /* Page transition */
@@ -232,8 +268,22 @@ h4, h5, h6 {
 /* Focus ring style */
 .focus-ring:focus {
   outline: none;
+}
+
+.focus-ring:focus-visible {
   box-shadow: 0 0 0 3px rgba(0, 142, 176, 0.2);
   border-color: var(--color-marea-teal);
+}
+
+select.focus-ring:focus,
+select.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--color-marea-border);
+}
+
+select.focus-ring {
+  outline: none;
 }
 
 /* Divider with text */
