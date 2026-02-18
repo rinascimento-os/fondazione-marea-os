@@ -134,6 +134,7 @@ select {
 /* Stat card decorative top border */
 .stat-card {
   position: relative;
+  overflow: hidden;
 }
 
 .stat-card::before {
@@ -144,6 +145,7 @@ select {
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, var(--color-marea-teal), var(--color-marea-yellow));
+  border-radius: 1rem 1rem 0 0;
 }
 
 /* Tooltip */
@@ -284,6 +286,12 @@ select.focus-ring:focus-visible {
 
 select.focus-ring {
   outline: none;
+}
+
+/* Sort header interaction */
+.sort-header {
+  cursor: pointer;
+  user-select: none;
 }
 
 /* Divider with text */

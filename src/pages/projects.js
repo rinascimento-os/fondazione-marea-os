@@ -353,7 +353,8 @@ function renderDetailContent(project) {
         <div>
           <label class="block text-xs font-medium text-marea-gray mb-1.5 uppercase tracking-wide">Descrizione</label>
           <textarea name="description" rows="3" placeholder="Descrivi il progetto..."
-                    class="w-full px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">${escapeHtml(project.description)}</textarea>
+                    oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                    class="w-full px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all resize-none overflow-hidden">${escapeHtml(project.description)}</textarea>
         </div>
         <div class="flex items-center justify-between pt-2">
           <button type="button" id="delete-project-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina progetto</button>
@@ -544,7 +545,9 @@ function openProjectForm(project = null, onSave = null) {
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Descrizione</label>
-        <textarea name="description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">${escapeHtml(project?.description)}</textarea>
+        <textarea name="description" rows="3"
+                  oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                  class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all resize-none overflow-hidden">${escapeHtml(project?.description)}</textarea>
       </div>
       <div class="flex items-center justify-between pt-3 border-t border-marea-border/60">
         <div>

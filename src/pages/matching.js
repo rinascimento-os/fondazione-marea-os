@@ -366,7 +366,8 @@ function openCreateMatchModal(pioniere, need) {
         <div>
           <label class="block text-sm font-medium text-marea-black mb-1.5">Note</label>
           <textarea name="notes" rows="2" placeholder="Note opzionali sull'abbinamento..."
-                    class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"></textarea>
+                    oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                    class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all resize-none overflow-hidden"></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-4">
           <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
