@@ -3,6 +3,7 @@ import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSearchableSelect, initSearchableSelect } from '../components/searchable-select.js'
 import { showAlert, showConfirm } from '../utils/confirm-delete.js'
+import { escapeAttr, withSubmitLock } from '../utils/helpers.js'
 
 let allEntries = []
 let allMatches = []
@@ -15,6 +16,7 @@ let sortColumn = 'date'
 let sortDirection = 'desc'
 let currentPage = 1
 let pageSize = 20
+let outsideClickHandler = null
 
 // Numeric/date sort icons
 const SORT_ICON_NEUTRAL = `<svg class="w-3 h-3 opacity-40" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>`
@@ -153,6 +155,25 @@ export function renderTimebank() {
 }
 
 export async function initTimebank() {
+  // Reset state on navigation
+  allEntries = []
+  allMatches = []
+  allPionieri = []
+  allProjects = []
+  filterDateFrom = null
+  filterDateTo = null
+  filterSearch = ''
+  sortColumn = 'date'
+  sortDirection = 'desc'
+  currentPage = 1
+  pageSize = 20
+
+  // Clean up previous outside-click handler
+  if (outsideClickHandler) {
+    document.removeEventListener('click', outsideClickHandler)
+    outsideClickHandler = null
+  }
+
   await Promise.all([loadEntries(), loadFormData()])
 
   document.getElementById('log-hours-btn')?.addEventListener('click', () => openLogHoursForm())
@@ -173,12 +194,13 @@ export async function initTimebank() {
     dateDropdown?.classList.toggle('hidden')
   })
 
-  // Close on outside click
-  document.addEventListener('click', (e) => {
+  // Close on outside click (stored for cleanup)
+  outsideClickHandler = (e) => {
     if (dateWrap && !dateWrap.contains(e.target)) {
       dateDropdown?.classList.add('hidden')
     }
-  })
+  }
+  document.addEventListener('click', outsideClickHandler)
 
   document.getElementById('tb-date-from')?.addEventListener('change', (e) => {
     filterDateFrom = e.target.value || null
@@ -215,7 +237,7 @@ export async function initTimebank() {
 
   // Page size
   document.getElementById('tb-page-size')?.addEventListener('change', (e) => {
-    pageSize = parseInt(e.target.value)
+    pageSize = parseInt(e.target.value, 10)
     currentPage = 1
     renderEntries()
   })
@@ -239,7 +261,7 @@ export async function initTimebank() {
   document.getElementById('tb-page-buttons')?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-page]')
     if (!btn || btn.disabled) return
-    currentPage = parseInt(btn.dataset.page)
+    currentPage = parseInt(btn.dataset.page, 10)
     renderEntries()
   })
 }
@@ -471,15 +493,15 @@ function renderEntries() {
           <td class="px-5 py-4 text-marea-gray">
             ${escapeHtml(project?.name) || '\u2014'}          </td>
           <td class="px-5 py-4">
-            <span class="badge bg-marea-teal-light text-marea-teal font-semibold">${e.hours}h</span>
+            <span class="badge bg-marea-teal-light text-marea-teal font-semibold">${escapeAttr(e.hours)}h</span>
           </td>
           <td class="px-5 py-4 text-marea-gray max-w-xs truncate">${escapeHtml(e.description) || '\u2014'}</td>
           <td class="px-5 py-4">
             <div class="flex items-center gap-4">
-              <button class="entry-edit text-marea-gray hover:text-marea-teal transition-colors" data-entry-id="${e.id}">
+              <button class="entry-edit text-marea-gray hover:text-marea-teal transition-colors" data-entry-id="${escapeAttr(e.id)}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
-              <button class="entry-delete text-marea-gray hover:text-red-500 transition-colors" data-entry-id="${e.id}">
+              <button class="entry-delete text-marea-gray hover:text-red-500 transition-colors" data-entry-id="${escapeAttr(e.id)}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -507,11 +529,11 @@ function renderEntries() {
                 ${escapeHtml(project?.name) || '\u2014'}              </p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <span class="badge bg-marea-teal-light text-marea-teal font-semibold">${e.hours}h</span>
-              <button class="entry-edit text-marea-gray hover:text-marea-teal transition-colors" data-entry-id="${e.id}">
+              <span class="badge bg-marea-teal-light text-marea-teal font-semibold">${escapeAttr(e.hours)}h</span>
+              <button class="entry-edit text-marea-gray hover:text-marea-teal transition-colors" data-entry-id="${escapeAttr(e.id)}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
-              <button class="entry-delete text-marea-gray hover:text-red-500 transition-colors" data-entry-id="${e.id}">
+              <button class="entry-delete text-marea-gray hover:text-red-500 transition-colors" data-entry-id="${escapeAttr(e.id)}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -606,13 +628,15 @@ function openLogHoursForm(existingEntry = null) {
                   class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all resize-none overflow-hidden">${isEdit ? escapeHtml(existingEntry.description || '') : ''}</textarea>
       </div>
       <div class="flex justify-end gap-3 pt-3 border-t border-marea-border/60">
-        <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
+        <button type="button" class="cancel-modal-btn btn-outline py-2 px-5">Annulla</button>
         <button type="submit" class="btn-gold py-2 px-5">${isEdit ? 'Salva modifiche' : 'Registra ore'}</button>
       </div>
     </form>
   `
 
   showModal(renderModal({ title: isEdit ? 'Modifica registrazione' : 'Registra ore', content }))
+
+  document.querySelector('#log-hours-form .cancel-modal-btn')?.addEventListener('click', () => closeModal())
 
   const pioniereCtrl = initSearchableSelect({
     id: 'lh-pioniere',
@@ -659,6 +683,9 @@ function openLogHoursForm(existingEntry = null) {
 
     if (Object.values(errors).some(Boolean)) return
 
+    const unlock = withSubmitLock(e.target)
+    if (!unlock) return
+
     const entryData = {
       hours: parseFloat(fd.get('hours')),
       date: fd.get('date'),
@@ -678,6 +705,7 @@ function openLogHoursForm(existingEntry = null) {
       closeModal()
       await loadEntries()
     } catch (err) {
+      unlock()
       console.error('Errore:', err)
       showAlert('Si \u00e8 verificato un errore. Riprova.')
     }

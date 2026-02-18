@@ -39,7 +39,7 @@ export function renderLayout(contentHtml, currentHash) {
   return `
     <div class="flex h-screen overflow-hidden">
       <!-- Mobile overlay -->
-      <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" onclick="document.getElementById('sidebar').classList.add('-translate-x-full');this.classList.add('hidden')"></div>
+      <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
 
       <!-- Sidebar -->
       <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-marea-navy text-white flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
@@ -78,7 +78,7 @@ export function renderLayout(contentHtml, currentHash) {
         <header class="bg-white/80 backdrop-blur-sm border-b border-marea-border px-4 lg:px-8 py-5 sticky top-0 z-10">
           <div class="flex items-center justify-between max-w-7xl mx-auto">
             <div class="flex items-center gap-3">
-              <button id="menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-overlay').classList.remove('hidden')">
+              <button id="menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
               </button>
               <div id="page-title-area">
@@ -107,4 +107,20 @@ export function initLayoutListeners() {
       window.location.hash = '#/login'
     })
   }
+
+  const sidebar = document.getElementById('sidebar')
+  const overlay = document.getElementById('sidebar-overlay')
+
+  const closeSidebar = () => {
+    sidebar?.classList.add('-translate-x-full')
+    overlay?.classList.add('hidden')
+  }
+
+  const openSidebar = () => {
+    sidebar?.classList.remove('-translate-x-full')
+    overlay?.classList.remove('hidden')
+  }
+
+  document.getElementById('menu-btn')?.addEventListener('click', openSidebar)
+  overlay?.addEventListener('click', closeSidebar)
 }

@@ -2,6 +2,7 @@ import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { showAlert, showConfirm } from '../utils/confirm-delete.js'
+import { escapeAttr, getInitials, urgencyBadge, urgencyLabel, withSubmitLock } from '../utils/helpers.js'
 
 let openNeeds = []
 let pionieri = []
@@ -77,6 +78,15 @@ export function renderMatching() {
 }
 
 export async function initMatching() {
+  // Reset state on navigation
+  openNeeds = []
+  pionieri = []
+  allMatches = []
+  selectedNeed = null
+  needsSearchQuery = ''
+  matchesSearchQuery = ''
+  pionieriSearchQuery = ''
+
   await Promise.all([loadOpenNeeds(), loadPionieri(), loadMatches()])
 
   // Collapsible matches section
@@ -180,7 +190,7 @@ function renderNeedsList() {
     const isSelected = selectedNeed?.id === n.id
     const borderColor = isSelected ? 'border-marea-teal bg-marea-teal-light/30' : 'border-marea-border/60'
     return `
-    <div class="need-card bg-white rounded-xl border-2 ${borderColor} p-5 cursor-pointer card-hover" data-need-id="${n.id}">
+    <div class="need-card bg-white rounded-xl border-2 ${borderColor} p-5 cursor-pointer card-hover" data-need-id="${escapeAttr(n.id)}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1">
           ${showProject ? `<p class="font-semibold text-sm text-marea-black">${escapeHtml(n.project?.name) || '—'}</p>` : ''}
@@ -289,7 +299,7 @@ function renderPionieriList() {
     const roleCompany = [p.role, p.company].filter(Boolean).map(s => escapeHtml(s)).join(' · ')
     const isAvailable = p.active_matches_count === 0
     return `
-    <div class="${!isAvailable ? 'bg-white border-amber-300' : 'bg-white border-marea-teal/50'} rounded-xl border p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${p.id}">
+    <div class="${!isAvailable ? 'bg-white border-amber-300' : 'bg-white border-marea-teal/50'} rounded-xl border p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${escapeAttr(p.id)}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-3">
           <div class="w-9 h-9 rounded-full bg-marea-teal/10 flex items-center justify-center flex-shrink-0">
@@ -342,11 +352,6 @@ function renderPionieriList() {
   })
 }
 
-function getInitials(name) {
-  if (!name) return '?'
-  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-}
-
 function openCreateMatchModal(pioniere, need) {
   const content = `
     <div class="space-y-5">
@@ -370,7 +375,7 @@ function openCreateMatchModal(pioniere, need) {
                     class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all resize-none overflow-hidden"></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
+          <button type="button" class="cancel-modal-btn btn-outline py-2 px-5">Annulla</button>
           <button type="submit" class="btn-gold py-2 px-5">Crea abbinamento</button>
         </div>
       </form>
@@ -379,8 +384,12 @@ function openCreateMatchModal(pioniere, need) {
 
   showModal(renderModal({ title: 'Nuovo abbinamento', content }))
 
+  document.querySelector('#create-match-form .cancel-modal-btn')?.addEventListener('click', () => closeModal())
+
   document.getElementById('create-match-form').addEventListener('submit', async (e) => {
     e.preventDefault()
+    const unlock = withSubmitLock(e.target)
+    if (!unlock) return
     const notes = new FormData(e.target).get('notes') || null
 
     try {
@@ -399,6 +408,7 @@ function openCreateMatchModal(pioniere, need) {
       await Promise.all([loadOpenNeeds(), loadMatches()])
       renderPionieriList()
     } catch (err) {
+      unlock()
       console.error('Errore:', err)
       showAlert('Si è verificato un errore. Riprova.')
     }
@@ -454,13 +464,13 @@ function renderMatchesList() {
           ${m.notes ? `<p class="text-xs text-marea-gray/70 mt-3 ml-9 italic">Note: ${escapeHtml(m.notes)}</p>` : ''}
         </div>
         <div class="flex items-center gap-3 ml-9 sm:ml-0">
-          <select class="match-status-select px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${m.id}">
+          <select class="match-status-select px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${escapeAttr(m.id)}">
             <option value="proposed" ${m.status === 'proposed' ? 'selected' : ''}>Proposto</option>
             <option value="confirmed" ${m.status === 'confirmed' ? 'selected' : ''}>Confermato</option>
             <option value="active" ${m.status === 'active' ? 'selected' : ''}>In corso</option>
             <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completato</option>
           </select>
-          <button class="match-delete text-marea-gray hover:text-red-500 transition-colors" data-match-id="${m.id}">
+          <button class="match-delete text-marea-gray hover:text-red-500 transition-colors" data-match-id="${escapeAttr(m.id)}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
         </div>
@@ -493,10 +503,21 @@ function renderMatchesList() {
       showConfirm('Eliminare questo abbinamento?', async () => {
         try {
           const match = allMatches.find(m => m.id === btn.dataset.matchId)
-          if (match?.need?.id) {
-            await supabase.from('project_needs').update({ status: 'open' }).eq('id', match.need.id)
-          }
           await supabase.from('matches').delete().eq('id', btn.dataset.matchId)
+
+          // Only revert need to 'open' if no other active matches remain for it
+          if (match?.need?.id) {
+            const { data: remaining } = await supabase
+              .from('matches')
+              .select('id')
+              .eq('project_need_id', match.need.id)
+              .in('status', ['proposed', 'confirmed', 'active'])
+              .limit(1)
+            if (!remaining || remaining.length === 0) {
+              await supabase.from('project_needs').update({ status: 'open' }).eq('id', match.need.id)
+            }
+          }
+
           await Promise.all([loadMatches(), loadOpenNeeds()])
         } catch (err) {
           console.error('Errore:', err)
@@ -507,9 +528,3 @@ function renderMatchesList() {
   })
 }
 
-function urgencyBadge(u) {
-  return { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-emerald-100 text-emerald-700' }[u] || 'bg-gray-100 text-gray-600'
-}
-function urgencyLabel(u) {
-  return { high: 'Alta', medium: 'Media', low: 'Bassa' }[u] || u
-}

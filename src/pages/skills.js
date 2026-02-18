@@ -2,6 +2,7 @@ import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { initDeleteConfirm, showAlert } from '../utils/confirm-delete.js'
+import { escapeAttr, withSubmitLock } from '../utils/helpers.js'
 
 let allSkills = []
 
@@ -93,7 +94,7 @@ function renderList(filter = '') {
       <h3 class="text-base font-bold text-marea-navy uppercase tracking-wider mb-3">${escapeHtml(category)}</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         ${skills.map(s => `
-          <div class="bg-white rounded-xl border border-marea-border/60 p-4 flex flex-col" data-id="${s.id}">
+          <div class="bg-white rounded-xl border border-marea-border/60 p-4 flex flex-col" data-id="${escapeAttr(s.id)}">
             <h4 class="font-medium text-marea-black text-sm">${escapeHtml(s.name)}</h4>
             ${s.keywords ? `
               <div class="mt-2 flex-1">
@@ -107,7 +108,7 @@ function renderList(filter = '') {
             ` : '<p class="text-xs text-marea-gray/50 mt-1 flex-1">Nessuna parola chiave</p>'}
             <div class="mt-3 pt-2 border-t border-marea-border/40 flex items-center justify-between">
               <span class="badge bg-marea-teal-light text-marea-teal text-xs">${escapeHtml(s.category) || 'Altro'}</span>
-              <button type="button" class="edit-skill-btn w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-navy hover:bg-marea-yellow transition-all" data-id="${s.id}" title="Modifica">
+              <button type="button" class="edit-skill-btn w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-navy hover:bg-marea-yellow transition-all" data-id="${escapeAttr(s.id)}" title="Modifica">
                 <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
             </div>
@@ -177,6 +178,9 @@ function openSkillForm(skill = null) {
       return
     }
 
+    const unlock = withSubmitLock(form)
+    if (!unlock) return
+
     const record = {
       name,
       category: fd.get('category') || 'Altro',
@@ -194,6 +198,7 @@ function openSkillForm(skill = null) {
       closeModal()
       await loadSkillsList()
     } catch (err) {
+      unlock()
       console.error('Errore:', err)
       showAlert('Si è verificato un errore. Riprova.')
     }

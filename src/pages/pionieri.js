@@ -4,6 +4,7 @@ import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/skill-picker.js'
 import { openCsvImport } from '../components/csv-import.js'
 import { initDeleteConfirm, showAlert } from '../utils/confirm-delete.js'
+import { escapeAttr, getInitials, withSubmitLock } from '../utils/helpers.js'
 
 let allPionieri = []
 let allSkills = []
@@ -109,7 +110,7 @@ function renderList(filter = '') {
   }
 
   container.innerHTML = filtered.map(p => `
-    <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer pioniere-card break-inside-avoid" data-id="${p.id}">
+    <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer pioniere-card break-inside-avoid" data-id="${escapeAttr(p.id)}">
       <div class="flex items-start gap-4">
         <div class="w-11 h-11 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
           <span class="text-marea-teal font-bold text-sm">${escapeHtml(getInitials(p.full_name))}</span>
@@ -141,11 +142,6 @@ function renderList(filter = '') {
   })
 }
 
-
-function getInitials(name) {
-  if (!name) return '?'
-  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-}
 
 function openPioniereDetail(pioniere) {
   const skills = pioniere.pioniere_skills?.map(ps => ps.skill).filter(Boolean) || []
@@ -361,6 +357,8 @@ function openPioniereForm(pioniere = null) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
+    const unlock = withSubmitLock(form)
+    if (!unlock) return
     const fd = new FormData(form)
     const record = {
       full_name: fd.get('full_name'),
@@ -397,6 +395,7 @@ function openPioniereForm(pioniere = null) {
       closeModal()
       await loadPionieri()
     } catch (err) {
+      unlock()
       console.error('Errore nel salvataggio:', err)
       showAlert('Si è verificato un errore. Riprova.')
     }

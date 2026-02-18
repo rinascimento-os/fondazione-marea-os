@@ -3,6 +3,7 @@ import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { loadSkills } from '../components/skill-picker.js'
 import { showAlert, showConfirm } from '../utils/confirm-delete.js'
+import { escapeAttr, urgencyBadge, urgencyLabel, withSubmitLock } from '../utils/helpers.js'
 
 let allProjects = []
 let allSkills = []
@@ -22,6 +23,12 @@ export function renderProjects() {
 }
 
 export async function initProjects() {
+  // Reset state on navigation
+  allProjects = []
+  filterType = ''
+  filterStatus = ''
+  searchQuery = ''
+
   try {
     allSkills = await loadSkills()
   } catch {
@@ -154,7 +161,7 @@ function renderList() {
     const skillTags = visibleSkills.map(name => `<span class="badge bg-marea-teal-light text-marea-teal text-[0.65rem]">${escapeHtml(name)}</span>`).join('') + (extraCount > 0 ? `<span class="badge bg-marea-border/40 text-marea-gray text-[0.65rem]">+${extraCount}</span>` : '')
     const statusStripe = { active: 'border-l-emerald-500', paused: 'border-l-orange-400', completed: 'border-l-marea-teal' }[p.status] || 'border-l-marea-teal'
     return `
-      <div class="bg-white rounded-2xl border border-marea-border/60 border-l-[3px] ${statusStripe} p-6 card-hover cursor-pointer project-card flex flex-col" data-id="${p.id}">
+      <div class="bg-white rounded-2xl border border-marea-border/60 border-l-[3px] ${statusStripe} p-6 card-hover cursor-pointer project-card flex flex-col" data-id="${escapeAttr(p.id)}">
         <div class="flex items-start justify-between gap-3 mb-1">
           <div>
             <h3 class="font-semibold text-marea-black text-lg">${escapeHtml(p.name)}</h3>
@@ -177,7 +184,7 @@ function renderList() {
           ` : `<span class="text-xs text-marea-gray">Nessuna esigenza</span>`}
           ${skillTags ? `<div class="flex items-center gap-1.5 flex-wrap">${skillTags}</div>` : ''}
           <div class="flex justify-end mt-auto pt-1">
-            <select class="status-select text-sm px-3 py-2 rounded-xl border border-marea-border bg-white text-marea-black font-medium focus-ring cursor-pointer" data-project-id="${p.id}">
+            <select class="status-select text-sm px-3 py-2 rounded-xl border border-marea-border bg-white text-marea-black font-medium focus-ring cursor-pointer" data-project-id="${escapeAttr(p.id)}">
               <option value="active" ${p.status === 'active' ? 'selected' : ''}>Attivo</option>
               <option value="paused" ${p.status === 'paused' ? 'selected' : ''}>In pausa</option>
               <option value="completed" ${p.status === 'completed' ? 'selected' : ''}>Completato</option>
@@ -241,7 +248,7 @@ function updatePageTitle(projectName) {
   headerRow.id = 'project-detail-header'
   headerRow.innerHTML = `
     <div class="flex items-center gap-3 relative z-10">
-      <button id="menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-overlay').classList.remove('hidden')">
+      <button id="menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <a href="#/progetti" class="inline-flex items-center gap-1 text-sm text-marea-gray hover:text-marea-black font-medium transition-colors">
@@ -254,6 +261,12 @@ function updatePageTitle(projectName) {
     </div>
     <div id="page-actions" class="flex flex-wrap gap-3 relative z-10"></div>
   `
+
+  // Wire up mobile menu button
+  document.getElementById('menu-btn')?.addEventListener('click', () => {
+    document.getElementById('sidebar')?.classList.remove('-translate-x-full')
+    document.getElementById('sidebar-overlay')?.classList.remove('hidden')
+  })
 }
 
 async function initProjectDetail(projectId) {
@@ -414,6 +427,8 @@ function renderDetailContent(project) {
   const form = document.getElementById('project-detail-form')
   form?.addEventListener('submit', async (e) => {
     e.preventDefault()
+    const unlock = withSubmitLock(form)
+    if (!unlock) return
     const fd = new FormData(form)
     const record = {
       name: fd.get('name'),
@@ -427,6 +442,7 @@ function renderDetailContent(project) {
       if (error) throw error
       await reloadDetail()
     } catch (err) {
+      unlock()
       console.error('Errore:', err)
       showAlert('Si è verificato un errore. Riprova.')
     }
@@ -498,7 +514,7 @@ function renderNeedsGrouped(needs) {
 function renderNeedCard(need) {
   const borderColor = { high: 'border-l-red-400', medium: 'border-l-amber-400', low: 'border-l-gray-300' }[need.urgency] || 'border-l-gray-300'
   return `
-    <div class="need-card flex items-center gap-3 p-3 rounded-xl border border-marea-border/60 border-l-[3px] ${borderColor} bg-white" data-need-id="${need.id}">
+    <div class="need-card flex items-center gap-3 p-3 rounded-xl border border-marea-border/60 border-l-[3px] ${borderColor} bg-white" data-need-id="${escapeAttr(need.id)}">
       <div class="flex-1 min-w-0">
         <span class="text-sm font-medium text-marea-black">${escapeHtml(need.skill?.name) || '—'}</span>
         ${need.description ? `<p class="text-xs text-marea-gray mt-0.5 truncate">${escapeHtml(need.description)}</p>` : ''}
@@ -506,7 +522,7 @@ function renderNeedCard(need) {
       <div class="flex items-center gap-2 flex-shrink-0">
         <span class="badge ${urgencyBadge(need.urgency)}">${urgencyLabel(need.urgency)}</span>
         ${need.hours_needed ? `<span class="text-xs font-medium text-marea-gray">${need.hours_needed}h</span>` : ''}
-        <button type="button" class="need-edit w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-navy hover:bg-marea-yellow transition-all flex-shrink-0" data-need-id="${need.id}" title="Modifica">
+        <button type="button" class="need-edit w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-navy hover:bg-marea-yellow transition-all flex-shrink-0" data-need-id="${escapeAttr(need.id)}" title="Modifica">
           <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
         </button>
       </div>
@@ -554,7 +570,7 @@ function openProjectForm(project = null, onSave = null) {
           ${isEdit ? `<button type="button" id="delete-project-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina</button>` : ''}
         </div>
         <div class="flex gap-3">
-          <button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>
+          <button type="button" class="cancel-modal-btn btn-outline py-2 px-5">Annulla</button>
           <button type="submit" class="btn-gold py-2 px-5">
             ${isEdit ? 'Salva modifiche' : 'Crea progetto'}
           </button>
@@ -566,8 +582,13 @@ function openProjectForm(project = null, onSave = null) {
   showModal(renderModal({ title: isEdit ? 'Modifica Progetto' : 'Nuovo Progetto', content }))
 
   const form = document.getElementById('project-form')
+
+  form.querySelector('.cancel-modal-btn')?.addEventListener('click', () => closeModal())
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
+    const unlock = withSubmitLock(form)
+    if (!unlock) return
     const fd = new FormData(form)
     const record = {
       name: fd.get('name'),
@@ -592,6 +613,7 @@ function openProjectForm(project = null, onSave = null) {
         await loadProjects()
       }
     } catch (err) {
+      unlock()
       console.error('Errore:', err)
       showAlert('Si è verificato un errore. Riprova.')
     }
@@ -659,7 +681,7 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
         ${isEdit ? `<button type="button" id="delete-need-btn" class="inline-flex items-center gap-2 py-2.5 px-6 rounded-full text-sm font-semibold bg-orange-500 text-white hover:brightness-110 transition-all">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           Elimina
-        </button>` : `<button type="button" onclick="document.getElementById('modal-container')?.remove()" class="btn-outline py-2 px-5">Annulla</button>`}
+        </button>` : `<button type="button" class="cancel-modal-btn btn-outline py-2 px-5">Annulla</button>`}
         <button type="submit" class="btn-gold py-2 px-5">${isEdit ? 'Salva modifiche' : 'Aggiungi esigenza'}</button>
       </div>
     </form>
@@ -670,8 +692,12 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
   const ta = document.querySelector('#need-form textarea[name="description"]')
   if (ta && ta.value) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px' }
 
+  document.querySelector('#need-form .cancel-modal-btn')?.addEventListener('click', () => closeModal())
+
   document.getElementById('need-form').addEventListener('submit', async (e) => {
     e.preventDefault()
+    const unlock = withSubmitLock(e.target)
+    if (!unlock) return
     const fd = new FormData(e.target)
 
     const record = {
@@ -699,6 +725,7 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
         await loadProjects()
       }
     } catch (err) {
+      unlock()
       console.error('Errore:', err)
       showAlert('Si è verificato un errore. Riprova.')
     }
@@ -726,23 +753,6 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
 
 // --- Helpers ---
 
-function statusBadge(status) {
-  return { active: 'bg-emerald-100 text-emerald-700', paused: 'bg-amber-100 text-amber-700', completed: 'bg-gray-100 text-gray-600' }[status] || 'bg-gray-100 text-gray-600'
-}
-
 function statusLabel(status) {
   return { active: 'Attivo', paused: 'In pausa', completed: 'Completato' }[status] || status
-}
-
-function urgencyBadge(u) {
-  return { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-gray-100 text-gray-600' }[u] || 'bg-gray-100 text-gray-600'
-}
-function urgencyLabel(u) {
-  return { high: 'Alta', medium: 'Media', low: 'Bassa' }[u] || u
-}
-function needStatusBadge(s) {
-  return { open: 'bg-blue-100 text-blue-700', matched: 'bg-amber-100 text-amber-700', fulfilled: 'bg-emerald-100 text-emerald-700' }[s] || 'bg-gray-100 text-gray-600'
-}
-function needStatusLabel(s) {
-  return { open: 'Aperta', matched: 'Abbinata', fulfilled: 'Soddisfatta' }[s] || s
 }
