@@ -295,9 +295,15 @@ function buildHoursChart(entries) {
   const sortedKeys = Object.keys(byMonth).sort()
   // Show up to last 12 months
   const keys = sortedKeys.slice(-12)
+  let lastYear = null
   const labels = keys.map(k => {
     const [y, m] = k.split('-')
-    return new Date(y, parseInt(m) - 1).toLocaleDateString('it-IT', { month: 'short', year: '2-digit' })
+    const monthStr = new Date(y, parseInt(m) - 1).toLocaleDateString('it-IT', { month: 'short' })
+    if (y !== lastYear) {
+      lastYear = y
+      return `${monthStr} ${y}`
+    }
+    return monthStr
   })
   const data = keys.map(k => Math.round(byMonth[k] * 10) / 10)
 
