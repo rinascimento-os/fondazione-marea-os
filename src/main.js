@@ -8,6 +8,7 @@ import { renderProjects, initProjects } from './pages/projects.js'
 import { renderMatching, initMatching } from './pages/matching.js'
 import { renderTimebank, initTimebank } from './pages/timebank.js'
 import { renderSkills, initSkills } from './pages/skills.js'
+import { renderVetrina, initVetrina } from './pages/vetrina.js'
 
 const app = document.getElementById('app')
 
@@ -24,6 +25,13 @@ let currentSession = null
 
 async function router() {
   const hash = window.location.hash || '#/login'
+
+  // Public vetrina page — no auth required
+  if (hash === '#/vetrina') {
+    app.innerHTML = renderVetrina()
+    await initVetrina()
+    return
+  }
 
   // Login page — no auth required
   if (hash === '#/login') {

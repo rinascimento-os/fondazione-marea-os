@@ -250,3 +250,136 @@ h4, h5, h6 {
   height: 1px;
   background: var(--color-marea-border);
 }
+
+/* ==============================
+   Vetrina (public showcase page)
+   ============================== */
+
+#vetrina-page {
+  scroll-behavior: smooth;
+}
+
+/* Sticky transparent nav */
+.vetrina-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: linear-gradient(180deg, rgba(26, 58, 74, 0.9) 0%, rgba(26, 58, 74, 0) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Hero gradient */
+.vetrina-hero {
+  background: linear-gradient(160deg, var(--color-marea-navy) 0%, #004d63 50%, var(--color-marea-teal) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.vetrina-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 80%, rgba(0, 142, 176, 0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(245, 197, 66, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.vetrina-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* CTA section gradient */
+.vetrina-cta {
+  background: linear-gradient(160deg, var(--color-marea-navy) 0%, #004d63 100%);
+  position: relative;
+}
+
+.vetrina-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 60% at 50% 100%, rgba(0, 142, 176, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.vetrina-cta > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Stat cards */
+.vetrina-stat-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1), 0 4px 12px -4px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(229, 226, 221, 0.5);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vetrina-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.15), 0 8px 20px -8px rgba(0, 0, 0, 0.08);
+}
+
+.vetrina-stat-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+}
+
+.vetrina-stat-number {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-marea-navy);
+  line-height: 1.1;
+  margin-bottom: 0.25rem;
+}
+
+.vetrina-stat-label {
+  font-size: 0.8rem;
+  color: var(--color-marea-gray);
+  font-weight: 500;
+}
+
+@media (min-width: 640px) {
+  .vetrina-stat-card {
+    padding: 1.75rem 2rem;
+  }
+  .vetrina-stat-number {
+    font-size: 2.75rem;
+  }
+}
+
+/* Scroll reveal animation */
+#vetrina-page .reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#vetrina-page .reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children animations */
+#vetrina-page .reveal-on-scroll:nth-child(2) { transition-delay: 0.08s; }
+#vetrina-page .reveal-on-scroll:nth-child(3) { transition-delay: 0.16s; }
+#vetrina-page .reveal-on-scroll:nth-child(4) { transition-delay: 0.24s; }
+
+/* Font utility for vetrina headings */
+.font-heading {
+  font-family: var(--font-heading);
+}
