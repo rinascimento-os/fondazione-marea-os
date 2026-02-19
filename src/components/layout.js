@@ -1,4 +1,5 @@
 import { signOut } from '../auth.js'
+import { renderModal, showModal, closeModal } from './modal.js'
 
 const navItems = [
   { hash: '#/dashboard', label: 'Dashboard', icon: dashboardIcon },
@@ -39,14 +40,14 @@ export function renderLayout(contentHtml, currentHash) {
   return `
     <div class="flex h-screen overflow-hidden">
       <!-- Mobile overlay -->
-      <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden" onclick="document.getElementById('sidebar').classList.add('-translate-x-full');this.classList.add('hidden')"></div>
+      <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
 
       <!-- Sidebar -->
       <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-marea-navy text-white flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
         <!-- Logo area -->
         <div class="px-6 py-6 border-b border-white/10">
           <img src="/brand_assets/logo/Fondazione_Marea_Logo_H_W.svg" alt="Fondazione Marea" class="h-8" />
-          <p class="text-xs text-white/40 mt-2 tracking-wide uppercase">Banca del Tempo</p>
+          <p class="text-xs text-white/60 mt-2 tracking-wide uppercase">Banca del Tempo</p>
         </div>
 
         <!-- Navigation -->
@@ -66,7 +67,7 @@ export function renderLayout(contentHtml, currentHash) {
 
         <!-- Footer -->
         <div class="p-3 border-t border-white/10">
-          <button id="logout-btn" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/50 hover:bg-white/8 hover:text-white w-full transition-all duration-150">
+          <button id="logout-btn" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-white/8 hover:text-white w-full transition-all duration-150">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Esci
           </button>
@@ -75,12 +76,18 @@ export function renderLayout(contentHtml, currentHash) {
 
       <!-- Main content -->
       <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="bg-white/80 backdrop-blur-sm border-b border-marea-border px-4 lg:px-8 py-5 flex items-center gap-4 sticky top-0 z-10">
-          <button id="menu-btn" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');document.getElementById('sidebar-overlay').classList.remove('hidden')">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-          </button>
-          <h1 class="text-2xl font-bold text-marea-black">${activeItem.label}</h1>
-          <div id="page-actions" class="ml-auto flex flex-wrap gap-3"></div>
+        <header class="bg-white/80 backdrop-blur-sm border-b border-marea-border px-4 lg:px-8 py-5 sticky top-0 z-10">
+          <div class="flex items-center justify-between max-w-7xl mx-auto">
+            <div class="flex items-center gap-3">
+              <button id="menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+              <div id="page-title-area">
+                <h1 class="text-2xl font-bold text-marea-black">${activeItem.label}</h1>
+              </div>
+            </div>
+            <div id="page-actions" class="flex flex-wrap gap-3"></div>
+          </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 lg:p-8">
@@ -96,9 +103,36 @@ export function renderLayout(contentHtml, currentHash) {
 export function initLayoutListeners() {
   const logoutBtn = document.getElementById('logout-btn')
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await signOut()
-      window.location.hash = '#/login'
+    logoutBtn.addEventListener('click', () => {
+      const content = `
+        <p class="text-sm text-marea-gray mb-6">Sei sicuro di voler uscire?</p>
+        <div class="flex justify-end gap-3">
+          <button data-modal-close="modal" class="btn-outline px-4 py-2 text-sm rounded-lg">Annulla</button>
+          <button id="confirm-logout" class="btn-gold px-4 py-2 text-sm rounded-lg">Esci</button>
+        </div>
+      `
+      showModal(renderModal({ title: 'Conferma uscita', content, size: 'sm' }))
+      document.getElementById('confirm-logout')?.addEventListener('click', async () => {
+        closeModal()
+        await signOut()
+        window.location.hash = '#/login'
+      })
     })
   }
+
+  const sidebar = document.getElementById('sidebar')
+  const overlay = document.getElementById('sidebar-overlay')
+
+  const closeSidebar = () => {
+    sidebar?.classList.add('-translate-x-full')
+    overlay?.classList.add('hidden')
+  }
+
+  const openSidebar = () => {
+    sidebar?.classList.remove('-translate-x-full')
+    overlay?.classList.remove('hidden')
+  }
+
+  document.getElementById('menu-btn')?.addEventListener('click', openSidebar)
+  overlay?.addEventListener('click', closeSidebar)
 }

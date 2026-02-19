@@ -208,7 +208,7 @@ export async function initDashboard() {
 
     const { data: recentEntries } = await supabase
       .from('time_entries')
-      .select('id, hours, date, description, match:matches(pioniere:pionieri(full_name), need:project_needs(project:projects(name))), pioniere:pionieri(full_name), project:projects(name)')
+      .select('id, hours, date, created_at, description, match:matches(pioniere:pionieri(full_name), need:project_needs(project:projects(name))), pioniere:pionieri(full_name), project:projects(name)')
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -221,7 +221,8 @@ export async function initDashboard() {
       recentMatches.forEach(m => {
         activities.push({
           date: m.created_at,
-          html: `<span class="font-medium text-marea-black">${escapeHtml(m.pioniere?.full_name) || '—'}</span> abbinato a <span class="font-medium text-marea-black">${escapeHtml(m.need?.project?.name) || '—'}</span> <span class="badge ${statusColor(m.status)}">${statusLabel(m.status)}</span>`
+          icon: `<span class="w-6 h-6 rounded-full bg-marea-yellow flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-marea-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></span>`,
+          html: `<span class="text-xs font-medium text-marea-navy uppercase tracking-wide">Match</span><br><span class="font-medium text-marea-black">${escapeHtml(m.pioniere?.full_name) || '—'}</span> → <span class="font-medium text-marea-black">${escapeHtml(m.need?.project?.name) || '—'}</span> <span class="badge ${statusColor(m.status)}">${statusLabel(m.status)}</span>`
         })
       })
     }
@@ -232,12 +233,14 @@ export async function initDashboard() {
         const projectName = e.match?.need?.project?.name || e.project?.name
         activities.push({
           date: e.date,
-          html: `<span class="font-medium text-marea-black">${escapeHtml(pioniereName) || '—'}</span> — <span class="font-semibold text-marea-teal">${e.hours}h</span> per <span class="font-medium text-marea-black">${escapeHtml(projectName) || '—'}</span>`
+          sortDate: e.created_at || e.date,
+          icon: `<span class="w-6 h-6 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-marea-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>`,
+          html: `<span class="text-xs font-medium text-marea-teal uppercase tracking-wide">Ore registrate</span><br><span class="font-medium text-marea-black">${escapeHtml(pioniereName) || '—'}</span> — <span class="font-semibold text-marea-teal">${e.hours}h</span> per <span class="font-medium text-marea-black">${escapeHtml(projectName) || '—'}</span>`
         })
       })
     }
 
-    activities.sort((a, b) => new Date(b.date) - new Date(a.date))
+    activities.sort((a, b) => new Date(b.sortDate || b.date) - new Date(a.sortDate || a.date))
 
     if (activities.length === 0) {
       activityEl.innerHTML = `
@@ -249,8 +252,9 @@ export async function initDashboard() {
       `
     } else {
       activityEl.innerHTML = `<div class="space-y-4">${activities.slice(0, 8).map(a => `
-        <div class="flex items-start gap-4 text-sm group">
+        <div class="flex items-start gap-3 text-sm group">
           <span class="text-xs text-marea-gray whitespace-nowrap mt-0.5 min-w-[4rem]">${formatDate(a.date)}</span>
+          ${a.icon}
           <span class="text-marea-gray/80 leading-relaxed">${a.html}</span>
         </div>
       `).join('')}</div>`
@@ -295,9 +299,15 @@ function buildHoursChart(entries) {
   const sortedKeys = Object.keys(byMonth).sort()
   // Show up to last 12 months
   const keys = sortedKeys.slice(-12)
+  let lastYear = null
   const labels = keys.map(k => {
     const [y, m] = k.split('-')
-    return new Date(y, parseInt(m) - 1).toLocaleDateString('it-IT', { month: 'short', year: '2-digit' })
+    const monthStr = new Date(y, parseInt(m) - 1).toLocaleDateString('it-IT', { month: 'short' })
+    if (y !== lastYear) {
+      lastYear = y
+      return `${monthStr} ${y}`
+    }
+    return monthStr
   })
   const data = keys.map(k => Math.round(byMonth[k] * 10) / 10)
 
@@ -599,6 +609,10 @@ function statusLabel(status) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+  // For date-only strings (YYYY-MM-DD), parse parts directly to avoid UTC shift
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+  }
+  return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
 }
