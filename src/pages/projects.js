@@ -43,18 +43,6 @@ export async function initProjects() {
 
   await loadProjects()
 
-  const pageActions = document.getElementById('page-actions')
-  if (pageActions) {
-    const legend = document.createElement('div')
-    legend.className = 'flex items-center gap-4 text-xs text-marea-gray'
-    legend.innerHTML = `
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-500"></span>Attivo</span>
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-orange-400"></span>In pausa</span>
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-marea-teal"></span>Completato</span>
-    `
-    pageActions.prepend(legend)
-  }
-
   document.getElementById('add-project-btn')?.addEventListener('click', () => openProjectForm())
   document.getElementById('projects-search')?.addEventListener('input', (e) => { searchQuery = e.target.value; renderList() })
   document.getElementById('filter-type')?.addEventListener('change', (e) => { filterType = e.target.value; renderList() })
@@ -95,7 +83,7 @@ function renderProjectList() {
         </button>
       </div>
 
-      <div id="projects-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div id="projects-list" class="space-y-4">
         <p class="text-sm text-marea-gray col-span-full">Caricamento...</p>
       </div>
     </div>
@@ -133,13 +121,11 @@ function renderList() {
   if (filterType) filtered = filtered.filter(p => p.type === filterType)
   if (filterStatus) filtered = filtered.filter(p => p.status === filterStatus)
 
-  const statusOrder = { active: 0, paused: 1, completed: 2 }
   const urgentCount = p => (p.project_needs || []).filter(n => n.urgency === 'high' && n.status === 'open').length
-  filtered.sort((a, b) => (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1) || urgentCount(b) - urgentCount(a))
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div class="col-span-full text-center py-16">
+      <div class="text-center py-16">
         <svg class="w-12 h-12 text-marea-border mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
         <p class="text-marea-gray mb-2">Nessun progetto trovato.</p>
         <p class="text-sm text-marea-gray/60">Clicca "Nuovo Progetto" per iniziare.</p>
@@ -148,53 +134,53 @@ function renderList() {
     return
   }
 
-  container.innerHTML = filtered.map(p => {
-    const openNeeds = (p.project_needs || []).filter(n => n.status === 'open').length
-    const totalNeeds = (p.project_needs || []).length
-    const coveredNeeds = totalNeeds - openNeeds
-    const pct = totalNeeds > 0 ? Math.round((coveredNeeds / totalNeeds) * 100) : 0
-    const barColor = pct === 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-marea-teal' : 'bg-marea-border'
-    const highUrgentOpen = (p.project_needs || []).filter(n => n.urgency === 'high' && n.status === 'open').length
-    const uniqueSkills = [...new Map((p.project_needs || []).filter(n => n.skill?.name).map(n => [n.skill.id, n.skill.name])).values()]
-    const visibleSkills = uniqueSkills.slice(0, 4)
-    const extraCount = uniqueSkills.length - 4
-    const skillTags = visibleSkills.map(name => `<span class="badge bg-marea-teal-light text-marea-teal text-[0.65rem]">${escapeHtml(name)}</span>`).join('') + (extraCount > 0 ? `<span class="badge bg-marea-border/40 text-marea-gray text-[0.65rem]">+${extraCount}</span>` : '')
-    const statusStripe = { active: 'border-l-emerald-500', paused: 'border-l-orange-400', completed: 'border-l-marea-teal' }[p.status] || 'border-l-marea-teal'
-    return `
-      <div class="bg-white rounded-2xl border border-marea-border/60 border-l-[3px] ${statusStripe} p-6 card-hover cursor-pointer project-card flex flex-col" data-id="${escapeAttr(p.id)}">
-        <div class="flex items-start justify-between gap-3 mb-1">
-          <div>
-            <h3 class="font-semibold text-marea-black text-lg">${escapeHtml(p.name)}</h3>
-            <p class="text-xs text-marea-gray mt-0.5">${p.type === 'onda_project' ? 'Onda' : 'Fondazione'}</p>
-          </div>
-          ${highUrgentOpen > 0 ? `<span class="inline-flex items-center gap-1.5 text-xs text-red-600 font-medium flex-shrink-0"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>${highUrgentOpen} ${highUrgentOpen > 1 ? 'urgenti' : 'urgente'}</span>` : ''}
-        </div>
-        ${p.description ? `<p class="text-sm text-marea-gray line-clamp-2 mb-3 mt-2">${escapeHtml(p.description)}</p>` : '<div class="mt-2"></div>'}
-        <div class="pt-3 border-t border-marea-border/40 space-y-3 flex-1 flex flex-col">
-          ${totalNeeds > 0 ? `
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <span class="text-[0.65rem] text-marea-gray uppercase tracking-wide">Esigenze</span>
-                <span class="text-xs text-marea-gray">${coveredNeeds} di ${totalNeeds} coperte</span>
-              </div>
-              <div class="h-1.5 bg-marea-border/30 rounded-full overflow-hidden">
-                <div class="${barColor} h-full rounded-full transition-all" style="width:${pct}%"></div>
-              </div>
-            </div>
-          ` : `<span class="text-xs text-marea-gray">Nessuna esigenza</span>`}
-          ${skillTags ? `<div class="flex items-center gap-1.5 flex-wrap">${skillTags}</div>` : ''}
-          <div class="flex justify-end mt-auto pt-1">
-            <select class="status-select text-sm px-3 py-2 rounded-xl border border-marea-border bg-white text-marea-black font-medium focus-ring cursor-pointer" data-project-id="${escapeAttr(p.id)}">
-              <option value="active" ${p.status === 'active' ? 'selected' : ''}>Attivo</option>
-              <option value="paused" ${p.status === 'paused' ? 'selected' : ''}>In pausa</option>
-              <option value="completed" ${p.status === 'completed' ? 'selected' : ''}>Completato</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    `
-  }).join('')
+  const isFiltered = filterType || filterStatus || searchQuery.trim()
 
+  if (isFiltered) {
+    // Flat grid when filters are active
+    const statusStripeMap = { active: 'border-l-emerald-500', paused: 'border-l-orange-400', completed: 'border-l-marea-teal' }
+    filtered.sort((a, b) => urgentCount(b) - urgentCount(a))
+    container.innerHTML = `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${filtered.map(p => renderProjectCard(p, statusStripeMap[p.status] || 'border-l-marea-teal')).join('')}</div>`
+  } else {
+    // Grouped accordions when no filters
+    const statusGroups = [
+      { key: 'active', label: 'Attivi', dot: 'bg-emerald-500', stripe: 'border-l-emerald-500' },
+      { key: 'paused', label: 'In pausa', dot: 'bg-orange-400', stripe: 'border-l-orange-400' },
+      { key: 'completed', label: 'Completati', dot: 'bg-marea-teal', stripe: 'border-l-marea-teal' },
+    ]
+
+    container.innerHTML = statusGroups.map(g => {
+      const items = filtered.filter(p => p.status === g.key).sort((a, b) => urgentCount(b) - urgentCount(a))
+      const isOpen = items.length > 0
+      return `
+        <div class="status-group" data-status="${g.key}">
+          <button type="button" class="status-group-toggle w-full flex items-center gap-3 py-3.5 px-4 text-left rounded-xl hover:bg-marea-cream/60 transition-colors cursor-pointer">
+            <svg class="w-5 h-5 text-marea-gray transition-transform ${isOpen ? 'rotate-90' : ''} group-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="w-3 h-3 rounded-full ${g.dot}"></span>
+            <span class="text-base font-semibold text-marea-black">${g.label}</span>
+            <span class="text-xs font-semibold text-marea-black bg-gray-200 rounded-full px-2.5 py-0.5">${items.length}</span>
+          </button>
+          <div class="status-group-content ${isOpen ? '' : 'hidden'} mt-1 pl-4 sm:pl-7 pb-2">
+            ${items.length === 0
+              ? `<p class="text-xs text-marea-gray/70 italic py-2">Nessun progetto</p>`
+              : `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${items.map(p => renderProjectCard(p, g.stripe)).join('')}</div>`}
+          </div>
+        </div>
+      `
+    }).join('')
+
+    // Status group accordion toggle
+    container.querySelectorAll('.status-group-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const content = btn.nextElementSibling
+        const chevron = btn.querySelector('.group-chevron')
+        content?.classList.toggle('hidden')
+        chevron?.classList.toggle('rotate-90')
+      })
+    })
+  }
+
+  // Project card click → detail
   container.querySelectorAll('.project-card').forEach(card => {
     card.addEventListener('click', (e) => {
       if (e.target.closest('.status-select')) return
@@ -204,6 +190,7 @@ function renderList() {
 
   container.querySelectorAll('.status-select').forEach(select => {
     select.addEventListener('change', async (e) => {
+      e.stopPropagation()
       const id = e.target.dataset.projectId
       const newStatus = e.target.value
       const { error } = await supabase.from('projects').update({ status: newStatus }).eq('id', id)
@@ -234,8 +221,8 @@ function updatePageTitle(projectName) {
   // If already replaced, just update the text
   const existing = document.getElementById('project-detail-header')
   if (existing) {
-    const h1 = existing.querySelector('h1')
-    if (h1) h1.textContent = projectName
+    const title = existing.querySelector('#page-title-area p')
+    if (title) title.textContent = projectName
     return
   }
 
@@ -257,7 +244,7 @@ function updatePageTitle(projectName) {
       </a>
     </div>
     <div id="page-title-area" class="absolute left-0 right-0 text-center pointer-events-none">
-      <h1 class="text-2xl font-bold text-marea-black">${escapeHtml(projectName)}</h1>
+      <p class="text-2xl font-bold text-marea-black">${escapeHtml(projectName)}</p>
     </div>
     <div id="page-actions" class="flex flex-wrap gap-3 relative z-10"></div>
   `
@@ -482,6 +469,52 @@ function renderDetailContent(project) {
   })
 }
 
+function renderProjectCard(p, stripe) {
+  const openNeeds = (p.project_needs || []).filter(n => n.status === 'open').length
+  const totalNeeds = (p.project_needs || []).length
+  const coveredNeeds = totalNeeds - openNeeds
+  const pct = totalNeeds > 0 ? Math.round((coveredNeeds / totalNeeds) * 100) : 0
+  const barColor = pct === 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-marea-teal' : 'bg-marea-border'
+  const highUrgentOpen = (p.project_needs || []).filter(n => n.urgency === 'high' && n.status === 'open').length
+  const uniqueSkills = [...new Map((p.project_needs || []).filter(n => n.skill?.name).map(n => [n.skill.id, n.skill.name])).values()]
+  const visibleSkills = uniqueSkills.slice(0, 4)
+  const extraCount = uniqueSkills.length - 4
+  const skillTags = visibleSkills.map(name => `<span class="badge bg-marea-teal-light text-marea-teal text-[0.65rem]">${escapeHtml(name)}</span>`).join('') + (extraCount > 0 ? `<span class="badge bg-marea-border/40 text-marea-gray text-[0.65rem]">+${extraCount}</span>` : '')
+  return `
+    <div class="bg-white rounded-2xl border border-marea-border/60 border-l-[3px] ${stripe} p-6 card-hover cursor-pointer project-card flex flex-col" data-id="${escapeAttr(p.id)}">
+      <div class="flex items-start justify-between gap-3 mb-1">
+        <div>
+          <p class="font-semibold text-marea-black text-lg">${escapeHtml(p.name)}</p>
+          <p class="text-xs text-marea-gray mt-0.5">${p.type === 'onda_project' ? 'Onda' : 'Fondazione'}</p>
+        </div>
+        ${highUrgentOpen > 0 ? `<span class="inline-flex items-center gap-1.5 text-xs text-red-600 font-medium flex-shrink-0"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>${highUrgentOpen} ${highUrgentOpen > 1 ? 'urgenti' : 'urgente'}</span>` : ''}
+      </div>
+      ${p.description ? `<p class="text-sm text-marea-gray line-clamp-2 mb-3 mt-2">${escapeHtml(p.description)}</p>` : '<div class="mt-2"></div>'}
+      <div class="pt-3 border-t border-marea-border/40 space-y-3 flex-1 flex flex-col">
+        ${totalNeeds > 0 ? `
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[0.65rem] text-marea-gray uppercase tracking-wide">Esigenze</span>
+              <span class="text-xs text-marea-gray">${coveredNeeds} di ${totalNeeds} coperte</span>
+            </div>
+            <div class="h-1.5 bg-marea-border/30 rounded-full overflow-hidden">
+              <div class="${barColor} h-full rounded-full transition-all" style="width:${pct}%"></div>
+            </div>
+          </div>
+        ` : `<span class="text-xs text-marea-gray">Nessuna esigenza</span>`}
+        ${skillTags ? `<div class="flex items-center gap-1.5 flex-wrap">${skillTags}</div>` : ''}
+        <div class="flex justify-end mt-auto pt-1">
+          <select class="status-select text-sm px-3 py-2 rounded-xl border border-marea-border bg-white text-marea-black font-medium focus-ring cursor-pointer" data-project-id="${escapeAttr(p.id)}">
+            <option value="active" ${p.status === 'active' ? 'selected' : ''}>Attivo</option>
+            <option value="paused" ${p.status === 'paused' ? 'selected' : ''}>In pausa</option>
+            <option value="completed" ${p.status === 'completed' ? 'selected' : ''}>Completato</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function renderNeedsGrouped(needs) {
   const groups = [
     { key: 'open', label: 'Aperte', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-blue-600' },
@@ -503,7 +536,7 @@ function renderNeedsGrouped(needs) {
         </button>
         <div class="needs-group-content ${isOpen ? '' : 'hidden'} mt-2 space-y-2 pl-6">
           ${items.length === 0
-            ? `<p class="text-xs text-marea-gray/50 italic py-2">Nessuna esigenza</p>`
+            ? `<p class="text-xs text-marea-gray/70 italic py-2">Nessuna esigenza</p>`
             : items.map(n => renderNeedCard(n)).join('')}
         </div>
       </div>

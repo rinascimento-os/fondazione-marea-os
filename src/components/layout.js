@@ -1,4 +1,5 @@
 import { signOut } from '../auth.js'
+import { renderModal, showModal, closeModal } from './modal.js'
 
 const navItems = [
   { hash: '#/dashboard', label: 'Dashboard', icon: dashboardIcon },
@@ -46,7 +47,7 @@ export function renderLayout(contentHtml, currentHash) {
         <!-- Logo area -->
         <div class="px-6 py-6 border-b border-white/10">
           <img src="/brand_assets/logo/Fondazione_Marea_Logo_H_W.svg" alt="Fondazione Marea" class="h-8" />
-          <p class="text-xs text-white/40 mt-2 tracking-wide uppercase">Banca del Tempo</p>
+          <p class="text-xs text-white/60 mt-2 tracking-wide uppercase">Banca del Tempo</p>
         </div>
 
         <!-- Navigation -->
@@ -66,7 +67,7 @@ export function renderLayout(contentHtml, currentHash) {
 
         <!-- Footer -->
         <div class="p-3 border-t border-white/10">
-          <button id="logout-btn" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/50 hover:bg-white/8 hover:text-white w-full transition-all duration-150">
+          <button id="logout-btn" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-white/8 hover:text-white w-full transition-all duration-150">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Esci
           </button>
@@ -102,9 +103,20 @@ export function renderLayout(contentHtml, currentHash) {
 export function initLayoutListeners() {
   const logoutBtn = document.getElementById('logout-btn')
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await signOut()
-      window.location.hash = '#/login'
+    logoutBtn.addEventListener('click', () => {
+      const content = `
+        <p class="text-sm text-marea-gray mb-6">Sei sicuro di voler uscire?</p>
+        <div class="flex justify-end gap-3">
+          <button data-modal-close="modal" class="btn-outline px-4 py-2 text-sm rounded-lg">Annulla</button>
+          <button id="confirm-logout" class="btn-gold px-4 py-2 text-sm rounded-lg">Esci</button>
+        </div>
+      `
+      showModal(renderModal({ title: 'Conferma uscita', content, size: 'sm' }))
+      document.getElementById('confirm-logout')?.addEventListener('click', async () => {
+        closeModal()
+        await signOut()
+        window.location.hash = '#/login'
+      })
     })
   }
 

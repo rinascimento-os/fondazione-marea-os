@@ -61,16 +61,27 @@ async function init() {
   // Supabase puts auth tokens in the URL hash (e.g. #access_token=...&type=invite)
   // Detect and handle these before routing
   const hash = window.location.hash
-  if (hash && (hash.includes('access_token=') || hash.includes('type=recovery') || hash.includes('type=invite'))) {
-    // Let Supabase client pick up the tokens from the URL
-    // The tokens are in fragment format that Supabase auto-detects
-    const { data, error } = await import('./supabase.js').then(m =>
-      m.supabase.auth.getSession()
-    )
-    if (data?.session) {
-      currentSession = data.session
-      window.location.hash = '#/dashboard'
-      // Continue to set up listeners below
+  if (hash && (hash.includes('access_token=') || hash.includes('type=recovery') || hash.includes('type=invite') || hash.includes('error='))) {
+    // Check for error in the URL fragment (expired/used link)
+    const params = new URLSearchParams(hash.substring(hash.indexOf('#') + 1))
+    const hashError = params.get('error_description') || params.get('error')
+
+    if (hashError) {
+      window.location.hash = '#/login'
+      // Store the error so the login page can display it
+      sessionStorage.setItem('login_error', 'Il link di accesso è scaduto o è già stato utilizzato. Richiedine uno nuovo.')
+    } else {
+      // Let Supabase client pick up the tokens from the URL
+      const { data, error } = await import('./supabase.js').then(m =>
+        m.supabase.auth.getSession()
+      )
+      if (data?.session) {
+        currentSession = data.session
+        window.location.hash = '#/dashboard'
+      } else {
+        window.location.hash = '#/login'
+        sessionStorage.setItem('login_error', 'Il link di accesso è scaduto o è già stato utilizzato. Richiedine uno nuovo.')
+      }
     }
   }
 

@@ -105,7 +105,7 @@ function renderList(filter = '') {
                   `).join('')}
                 </div>
               </div>
-            ` : '<p class="text-xs text-marea-gray/50 mt-1 flex-1">Nessuna parola chiave</p>'}
+            ` : '<p class="text-xs text-marea-gray/70 mt-1 flex-1">Nessuna parola chiave</p>'}
             <div class="mt-3 pt-2 border-t border-marea-border/40 flex items-center justify-between">
               <span class="badge bg-marea-teal-light text-marea-teal text-xs">${escapeHtml(s.category) || 'Altro'}</span>
               <button type="button" class="edit-skill-btn w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-navy hover:bg-marea-yellow transition-all" data-id="${escapeAttr(s.id)}" title="Modifica">

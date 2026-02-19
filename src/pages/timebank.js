@@ -45,7 +45,7 @@ export function renderTimebank() {
     <div>
       <!-- Summary stats -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover">
+        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6">
           <div class="flex items-center justify-between mb-2">
             <p id="tb-total-hours-label" class="text-sm font-medium text-marea-gray">Ore totali</p>
             <span class="w-9 h-9 rounded-xl bg-marea-teal-light flex items-center justify-center">
@@ -54,7 +54,7 @@ export function renderTimebank() {
           </div>
           <p id="tb-total-hours" class="text-3xl font-bold text-marea-black">—</p>
         </div>
-        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover">
+        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6">
           <div class="flex items-center justify-between mb-2">
             <p id="tb-active-pionieri-label" class="text-sm font-medium text-marea-gray">Pionieri attivi</p>
             <span class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center">
@@ -63,7 +63,7 @@ export function renderTimebank() {
           </div>
           <p id="tb-active-pionieri" class="text-3xl font-bold text-marea-black">—</p>
         </div>
-        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover">
+        <div class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6">
           <div class="flex items-center justify-between mb-2">
             <p id="tb-projects-served-label" class="text-sm font-medium text-marea-gray">Progetti serviti</p>
             <span class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
@@ -420,7 +420,7 @@ function renderPagination(totalItems) {
   let buttons = ''
 
   // Prev
-  buttons += `<button data-page="${currentPage - 1}" class="p-2 rounded-lg transition-colors ${currentPage === 1 ? 'text-marea-gray/30 cursor-not-allowed' : 'text-marea-gray hover:bg-marea-light'}" ${currentPage === 1 ? 'disabled' : ''}>
+  buttons += `<button data-page="${currentPage - 1}" class="p-2 rounded-lg transition-colors ${currentPage === 1 ? 'text-marea-gray/60 cursor-not-allowed' : 'text-marea-gray hover:bg-marea-light'}" ${currentPage === 1 ? 'disabled' : ''}>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
   </button>`
 
@@ -448,7 +448,7 @@ function renderPagination(totalItems) {
   }
 
   // Next
-  buttons += `<button data-page="${currentPage + 1}" class="p-2 rounded-lg transition-colors ${currentPage === totalPages ? 'text-marea-gray/30 cursor-not-allowed' : 'text-marea-gray hover:bg-marea-light'}" ${currentPage === totalPages ? 'disabled' : ''}>
+  buttons += `<button data-page="${currentPage + 1}" class="p-2 rounded-lg transition-colors ${currentPage === totalPages ? 'text-marea-gray/60 cursor-not-allowed' : 'text-marea-gray hover:bg-marea-light'}" ${currentPage === totalPages ? 'disabled' : ''}>
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
   </button>`
 
@@ -732,12 +732,20 @@ function updateDateRangeLabel() {
   btn.classList.toggle('text-marea-gray', !(filterDateFrom || filterDateTo))
 }
 
+function parseDateLocal(dateStr) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+  return new Date(dateStr)
+}
+
 function formatDateShort(dateStr) {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+  return parseDateLocal(dateStr).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return '\u2014'
-  return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+  return parseDateLocal(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
 }

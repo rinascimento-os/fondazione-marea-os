@@ -187,10 +187,8 @@ function renderNeedsList() {
   }
 
   const renderNeedCard = (n, showProject) => {
-    const isSelected = selectedNeed?.id === n.id
-    const borderColor = isSelected ? 'border-marea-teal bg-marea-teal-light/30' : 'border-marea-border/60'
     return `
-    <div class="need-card bg-white rounded-xl border-2 ${borderColor} p-5 cursor-pointer card-hover" data-need-id="${escapeAttr(n.id)}">
+    <div class="need-card bg-white rounded-xl border-2 border-marea-border/60 p-5 cursor-pointer card-hover relative" data-need-id="${escapeAttr(n.id)}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex-1">
           ${showProject ? `<p class="font-semibold text-sm text-marea-black">${escapeHtml(n.project?.name) || '—'}</p>` : ''}
@@ -238,26 +236,32 @@ function lockNeedsPanel() {
   const needsList = document.getElementById('open-needs-list')
   if (!needsList) return
 
+  const selectedClasses = ['border-marea-teal', 'bg-marea-teal/5', 'ring-2', 'ring-marea-teal/30', 'shadow-md']
+  const defaultClasses = ['border-marea-border/60']
+
+  needsList.querySelectorAll('.need-card').forEach(c => {
+    if (selectedNeed) {
+      if (c.dataset.needId === selectedNeed.id) {
+        c.classList.remove('opacity-40', 'pointer-events-none', ...defaultClasses)
+        c.classList.add(...selectedClasses)
+      } else {
+        c.classList.add('opacity-40', 'pointer-events-none', ...defaultClasses)
+        c.classList.remove(...selectedClasses)
+      }
+    } else {
+      c.classList.remove('opacity-40', 'pointer-events-none', ...selectedClasses)
+      c.classList.add(...defaultClasses)
+    }
+  })
+
   if (selectedNeed) {
     needsList.classList.remove('overflow-y-auto')
     needsList.classList.add('overflow-hidden')
-    // Dim non-selected cards
-    needsList.querySelectorAll('.need-card').forEach(c => {
-      if (c.dataset.needId !== selectedNeed.id) {
-        c.classList.add('opacity-40', 'pointer-events-none')
-      } else {
-        c.classList.remove('opacity-40', 'pointer-events-none')
-      }
-    })
-    // Scroll selected card into view
     const selectedCard = needsList.querySelector(`.need-card[data-need-id="${selectedNeed.id}"]`)
     selectedCard?.scrollIntoView({ block: 'nearest' })
   } else {
     needsList.classList.remove('overflow-hidden')
     needsList.classList.add('overflow-y-auto')
-    needsList.querySelectorAll('.need-card').forEach(c => {
-      c.classList.remove('opacity-40', 'pointer-events-none')
-    })
   }
 }
 
