@@ -173,7 +173,7 @@ export async function initDashboard() {
       supabase.from('time_entries').select('hours, date'),
       supabase.from('matches').select('status, need:project_needs(status, project:projects(status))'),
       supabase.from('pioniere_skills').select('skill:skills(name)'),
-      supabase.from('project_needs').select('urgency, status, project:projects(status)').eq('status', 'open'),
+      supabase.from('project_needs').select('urgency, status, project:projects(status)').in('status', ['open', 'matched']),
     ])
 
     const el = (id) => document.getElementById(id)
@@ -392,7 +392,7 @@ function buildMatchStatusChart(matchData) {
   const statusMeta = {
     proposed: { label: 'Proposto', color: BRAND.yellow },
     confirmed: { label: 'Confermato', color: BRAND.sky },
-    active: { label: 'Attivo', color: BRAND.emerald },
+    active: { label: 'In corso', color: BRAND.emerald },
     completed: { label: 'Completato', color: BRAND.navy },
   }
 
@@ -609,7 +609,7 @@ function statusLabel(status) {
   const labels = {
     proposed: 'Proposto',
     confirmed: 'Confermato',
-    active: 'Attivo',
+    active: 'In corso',
     completed: 'Completato',
   }
   return labels[status] || status
