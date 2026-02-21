@@ -31,52 +31,49 @@ export function renderDashboard() {
     <div id="dashboard-content">
       <!-- Stat cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-        <a href="#/pionieri" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover block">
+        <a href="#/pionieri" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 block">
           <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-1.5">
-              <p class="text-sm font-medium text-marea-gray">Pionieri totali</p>
-              <span class="tooltip">
-                <svg class="w-3.5 h-3.5 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
-                <span class="tooltip-text">Numero totale di Pionieri registrati nella rete</span>
-              </span>
-            </div>
+            <p class="text-sm font-medium text-marea-gray">Pionieri totali</p>
             <span class="w-10 h-10 rounded-xl bg-marea-teal-light flex items-center justify-center">
               <svg class="w-5 h-5 text-marea-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </span>
           </div>
-          <p id="stat-pionieri" class="text-4xl font-bold text-marea-black">&mdash;</p>
+          <div class="flex items-end justify-between">
+            <p id="stat-pionieri" class="text-4xl font-bold text-marea-black">&mdash;</p>
+            <svg class="w-4 h-4 text-marea-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </div>
         </a>
-        <a href="#/progetti" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover block">
+        <a href="#/progetti" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 block">
           <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-1.5">
-              <p class="text-sm font-medium text-marea-gray">Progetti attivi</p>
-              <span class="tooltip">
-                <svg class="w-3.5 h-3.5 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
-                <span class="tooltip-text">Progetti con stato attivo che necessitano di volontari</span>
-              </span>
-            </div>
+            <p class="text-sm font-medium text-marea-gray">Progetti attivi</p>
             <span class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
               <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
             </span>
           </div>
-          <p id="stat-projects" class="text-4xl font-bold text-marea-black">&mdash;</p>
+          <div class="flex items-end justify-between">
+            <p id="stat-projects" class="text-4xl font-bold text-marea-black">&mdash;</p>
+            <svg class="w-4 h-4 text-marea-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </div>
         </a>
-        <a href="#/matching" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover block">
+        <a href="#/matching" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 block">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-1.5">
               <p class="text-sm font-medium text-marea-gray">Match attivi</p>
               <span class="tooltip">
                 <svg class="w-3.5 h-3.5 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
-                <span class="tooltip-text">Abbinamenti proposti, confermati o in corso</span>
+                <span class="tooltip-text">Match proposti, confermati o in corso</span>
               </span>
             </div>
             <span class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
               <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
             </span>
           </div>
-          <p id="stat-matches" class="text-4xl font-bold text-marea-black">&mdash;</p>
+          <div class="flex items-end justify-between">
+            <p id="stat-matches" class="text-4xl font-bold text-marea-black">&mdash;</p>
+            <svg class="w-4 h-4 text-marea-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </div>
         </a>
-        <a href="#/timebank" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 card-hover block">
+        <a href="#/timebank" class="stat-card bg-white rounded-2xl border border-marea-border/60 p-6 block">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-1.5">
               <p class="text-sm font-medium text-marea-gray">Ore totali</p>
@@ -89,7 +86,10 @@ export function renderDashboard() {
               <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </span>
           </div>
-          <p id="stat-hours" class="text-4xl font-bold text-marea-black">&mdash;</p>
+          <div class="flex items-end justify-between">
+            <p id="stat-hours" class="text-4xl font-bold text-marea-black">&mdash;</p>
+            <svg class="w-4 h-4 text-marea-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </div>
         </a>
       </div>
 
@@ -167,14 +167,13 @@ export async function initDashboard() {
   destroyCharts()
 
   try {
-    const [pionieri, projects, matches, timeEntries, allMatches, skills, needs] = await Promise.all([
+    const [pionieri, projects, timeEntries, allMatches, skills, needs] = await Promise.all([
       supabase.from('pionieri').select('id', { count: 'exact', head: true }),
       supabase.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('matches').select('id', { count: 'exact', head: true }).in('status', ['proposed', 'confirmed', 'active']),
       supabase.from('time_entries').select('hours, date'),
-      supabase.from('matches').select('status'),
+      supabase.from('matches').select('status, need:project_needs(status, project:projects(status))'),
       supabase.from('pioniere_skills').select('skill:skills(name)'),
-      supabase.from('project_needs').select('urgency, status').eq('status', 'open'),
+      supabase.from('project_needs').select('urgency, status, project:projects(status)').in('status', ['open', 'matched']),
     ])
 
     const el = (id) => document.getElementById(id)
@@ -182,7 +181,14 @@ export async function initDashboard() {
     // --- Stat cards ---
     if (el('stat-pionieri')) el('stat-pionieri').textContent = pionieri.count ?? 0
     if (el('stat-projects')) el('stat-projects').textContent = projects.count ?? 0
-    if (el('stat-matches')) el('stat-matches').textContent = matches.count ?? 0
+
+    // Active matches: only count those under active projects and non-fulfilled needs
+    const activeMatchCount = (allMatches.data || []).filter(m =>
+      ['proposed', 'confirmed', 'active'].includes(m.status) &&
+      m.need?.project?.status !== 'completed' &&
+      m.need?.status !== 'fulfilled'
+    ).length
+    if (el('stat-matches')) el('stat-matches').textContent = activeMatchCount
 
     const totalHours = (timeEntries.data || []).reduce((sum, e) => sum + (parseFloat(e.hours) || 0), 0)
     if (el('stat-hours')) el('stat-hours').textContent = totalHours > 0 ? totalHours.toFixed(1) : '0'
@@ -190,14 +196,16 @@ export async function initDashboard() {
     // --- Chart: Hours over time ---
     buildHoursChart(timeEntries.data || [])
 
-    // --- Chart: Match status ---
-    buildMatchStatusChart(allMatches.data || [])
+    // --- Chart: Match status --- (only matches under active projects)
+    const effectiveMatches = (allMatches.data || []).filter(m => m.need?.project?.status !== 'completed')
+    buildMatchStatusChart(effectiveMatches)
 
     // --- Chart: Skills distribution ---
     buildSkillsChart(skills.data || [])
 
-    // --- Chart: Needs urgency ---
-    buildUrgencyChart(needs.data || [])
+    // --- Chart: Needs urgency --- (only needs under active projects)
+    const effectiveNeeds = (needs.data || []).filter(n => n.project?.status !== 'completed')
+    buildUrgencyChart(effectiveNeeds)
 
     // --- Recent activity ---
     const { data: recentMatches } = await supabase
@@ -384,7 +392,7 @@ function buildMatchStatusChart(matchData) {
   const statusMeta = {
     proposed: { label: 'Proposto', color: BRAND.yellow },
     confirmed: { label: 'Confermato', color: BRAND.sky },
-    active: { label: 'Attivo', color: BRAND.emerald },
+    active: { label: 'In corso', color: BRAND.emerald },
     completed: { label: 'Completato', color: BRAND.navy },
   }
 
@@ -601,7 +609,7 @@ function statusLabel(status) {
   const labels = {
     proposed: 'Proposto',
     confirmed: 'Confermato',
-    active: 'Attivo',
+    active: 'In corso',
     completed: 'Completato',
   }
   return labels[status] || status

@@ -48,12 +48,11 @@ export function renderMatching() {
 
       <!-- Collapsible existing matches -->
       <div class="mt-6 border-t border-marea-border/60 pt-4">
-        <button id="matches-toggle" class="flex items-center gap-2 w-full text-left group">
-          <svg id="matches-chevron" class="w-4 h-4 text-marea-gray transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-          <h2 class="text-lg text-marea-black">Abbinamenti esistenti</h2>
-          <span id="matches-count-badge" class="badge bg-marea-navy/10 text-marea-navy font-semibold"></span>
-        </button>
-        <div id="match-manage-view" class="hidden mt-4">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg text-marea-black">Match esistenti</h2>
+          <span id="matches-count-badge" class="text-xs font-semibold text-marea-black bg-gray-200 rounded-full px-2.5 py-0.5"><svg class="w-4 h-4 animate-spin text-marea-navy/40" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></span>
+        </div>
+        <div id="match-manage-view" class="mt-4">
           <div class="flex flex-wrap items-center gap-2 mb-6">
             <div class="relative flex-1 max-w-md">
               <input type="text" id="matches-search" placeholder="Cerca per pioniere, progetto o competenza..."
@@ -68,7 +67,7 @@ export function renderMatching() {
               <option value="completed">Completato</option>
             </select>
           </div>
-          <div id="matches-list" class="space-y-3">
+          <div id="matches-list" class="space-y-3 min-h-[60vh]">
             <p class="text-sm text-marea-gray">Caricamento...</p>
           </div>
         </div>
@@ -89,19 +88,6 @@ export async function initMatching() {
 
   await Promise.all([loadOpenNeeds(), loadPionieri(), loadMatches()])
 
-  // Collapsible matches section
-  document.getElementById('matches-toggle')?.addEventListener('click', () => {
-    const manageView = document.getElementById('match-manage-view')
-    const chevron = document.getElementById('matches-chevron')
-    manageView.classList.toggle('hidden')
-    chevron.classList.toggle('rotate-90')
-    if (!manageView.classList.contains('hidden')) {
-      setTimeout(() => {
-        document.getElementById('matches-toggle').scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 50)
-    }
-  })
-
   document.getElementById('needs-search')?.addEventListener('input', (e) => { needsSearchQuery = e.target.value; renderNeedsList() })
   document.getElementById('pionieri-manual-search')?.addEventListener('input', (e) => { pionieriSearchQuery = e.target.value; renderPionieriList() })
   document.getElementById('matches-search')?.addEventListener('input', (e) => { matchesSearchQuery = e.target.value; renderMatchesList() })
@@ -112,11 +98,12 @@ async function loadOpenNeeds() {
   try {
     const { data } = await supabase
       .from('project_needs')
-      .select('*, skill:skills(id, name), project:projects(id, name)')
+      .select('*, skill:skills(id, name), project:projects(id, name, status)')
       .eq('status', 'open')
       .order('urgency')
 
-    openNeeds = data || []
+    // Exclude needs from completed projects
+    openNeeds = (data || []).filter(n => n.project?.status !== 'completed')
   } catch {
     openNeeds = []
   }
@@ -127,12 +114,16 @@ async function loadPionieri() {
   try {
     const { data } = await supabase
       .from('pionieri')
-      .select('*, pioniere_skills(skill_id, skill:skills(id, name)), matches(id, status)')
+      .select('*, pioniere_skills(skill_id, skill:skills(id, name)), matches(id, status, need:project_needs(id, status, project:projects(id, status)))')
       .order('full_name')
 
     pionieri = (data || []).map(p => ({
       ...p,
-      active_matches_count: (p.matches || []).filter(m => ['proposed', 'confirmed', 'active'].includes(m.status)).length,
+      active_matches_count: (p.matches || []).filter(m =>
+        ['proposed', 'confirmed', 'active'].includes(m.status) &&
+        m.need?.project?.status !== 'completed' &&
+        m.need?.status !== 'fulfilled'
+      ).length,
     }))
   } catch {
     pionieri = []
@@ -143,7 +134,7 @@ async function loadMatches() {
   try {
     const { data } = await supabase
       .from('matches')
-      .select('*, pioniere:pionieri(id, full_name, email, location), need:project_needs(id, description, hours_needed, skill:skills(name), project:projects(id, name))')
+      .select('*, pioniere:pionieri(id, full_name, email, location), need:project_needs(id, description, hours_needed, status, skill:skills(name), project:projects(id, name, status))')
       .order('created_at', { ascending: false })
 
     allMatches = data || []
@@ -217,6 +208,13 @@ function renderNeedsList() {
     return renderNeedCard(group.needs[0], true)
   }).join('')
 
+  // If selected need is no longer in the visible list, clear selection
+  if (selectedNeed && !filtered.find(n => n.id === selectedNeed.id)) {
+    selectedNeed = null
+    renderPionieriList()
+  }
+  lockNeedsPanel()
+
   container.querySelectorAll('.need-card').forEach(card => {
     card.addEventListener('click', () => {
       const clickedNeed = openNeeds.find(n => n.id === card.dataset.needId) || filtered.find(n => n.id === card.dataset.needId)
@@ -242,27 +240,17 @@ function lockNeedsPanel() {
   needsList.querySelectorAll('.need-card').forEach(c => {
     if (selectedNeed) {
       if (c.dataset.needId === selectedNeed.id) {
-        c.classList.remove('opacity-40', 'pointer-events-none', ...defaultClasses)
+        c.classList.remove('opacity-40', ...defaultClasses)
         c.classList.add(...selectedClasses)
       } else {
-        c.classList.add('opacity-40', 'pointer-events-none', ...defaultClasses)
+        c.classList.add('opacity-40', ...defaultClasses)
         c.classList.remove(...selectedClasses)
       }
     } else {
-      c.classList.remove('opacity-40', 'pointer-events-none', ...selectedClasses)
+      c.classList.remove('opacity-40', ...selectedClasses)
       c.classList.add(...defaultClasses)
     }
   })
-
-  if (selectedNeed) {
-    needsList.classList.remove('overflow-y-auto')
-    needsList.classList.add('overflow-hidden')
-    const selectedCard = needsList.querySelector(`.need-card[data-need-id="${selectedNeed.id}"]`)
-    selectedCard?.scrollIntoView({ block: 'nearest' })
-  } else {
-    needsList.classList.remove('overflow-hidden')
-    needsList.classList.add('overflow-y-auto')
-  }
 }
 
 function renderPionieriList() {
@@ -287,12 +275,18 @@ function renderPionieriList() {
   if (searchInput) searchInput.value = pionieriSearchQuery
 
   const skillId = selectedNeed.skill_id
+  const alreadyMatchedIds = new Set(
+    allMatches
+      .filter(m => m.project_need_id === selectedNeed.id && ['proposed', 'confirmed', 'active'].includes(m.status) && m.need?.project?.status !== 'completed' && m.need?.status !== 'fulfilled')
+      .map(m => m.pioniere_id)
+  )
   const matching = pionieri.filter(p =>
-    p.pioniere_skills?.some(ps => ps.skill_id === skillId)
+    !alreadyMatchedIds.has(p.id) && p.pioniere_skills?.some(ps => ps.skill_id === skillId)
   )
   const others = pionieri.filter(p =>
-    !p.pioniere_skills?.some(ps => ps.skill_id === skillId)
+    !alreadyMatchedIds.has(p.id) && !p.pioniere_skills?.some(ps => ps.skill_id === skillId)
   )
+  const alreadyMatched = pionieri.filter(p => alreadyMatchedIds.has(p.id))
 
   if (pionieri.length === 0) {
     container.innerHTML = '<p class="text-sm text-marea-gray">Nessun Pioniere registrato.</p>'
@@ -303,17 +297,20 @@ function renderPionieriList() {
     const roleCompany = [p.role, p.company].filter(Boolean).map(s => escapeHtml(s)).join(' · ')
     const isAvailable = p.active_matches_count === 0
     return `
-    <div class="${!isAvailable ? 'bg-white border-amber-300' : 'bg-white border-marea-teal/50'} rounded-xl border p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${escapeAttr(p.id)}">
+    <div class="bg-white border-marea-teal/50 rounded-xl border p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${escapeAttr(p.id)}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-3">
           <div class="w-9 h-9 rounded-full bg-marea-teal/10 flex items-center justify-center flex-shrink-0">
             <span class="text-marea-teal font-bold text-xs">${escapeHtml(getInitials(p.full_name))}</span>
           </div>
           <div>
-            <div class="flex items-center gap-2">
-              <p class="font-semibold text-sm text-marea-black">${escapeHtml(p.full_name)}</p>
-              ${!isAvailable ? `<span class="text-[11px] text-amber-700 font-medium">Impegnato in ${p.active_matches_count} match</span>` : ''}
-            </div>
+            <p class="font-semibold text-sm text-marea-black">${escapeHtml(p.full_name)}</p>
+            ${!isAvailable ? (() => {
+              const activeMatchDetails = allMatches
+                .filter(m => m.pioniere_id === p.id && ['proposed', 'confirmed', 'active'].includes(m.status) && m.need?.project?.status !== 'completed' && m.need?.status !== 'fulfilled')
+                .map(m => [m.need?.project?.name, m.need?.skill?.name].filter(Boolean).join(' — '))
+              return `<span class="relative text-[11px] text-amber-700 font-medium match-info-trigger block mt-0.5" data-details="${escapeAttr(activeMatchDetails.join('|||'))}">Impegnato in ${p.active_matches_count} match</span>`
+            })() : ''}
             ${roleCompany ? `<p class="text-xs text-marea-gray mt-0.5">${roleCompany}</p>` : ''}
             <p class="text-xs text-marea-gray ${roleCompany ? '' : 'mt-0.5'}">${escapeHtml(p.location) || ''}</p>
             <div class="flex flex-wrap items-center gap-1.5 mt-2">
@@ -331,27 +328,48 @@ function renderPionieriList() {
 
   // When searching, search ALL pionieri; otherwise show only matching
   const q = pionieriSearchQuery.trim().toLowerCase()
-  let displayMatching, displayOthers
+  let displayMatching, displayOthers, displayAlready
 
   if (q) {
     displayMatching = matching.filter(p => p.full_name?.toLowerCase().includes(q))
     displayOthers = others.filter(p => p.full_name?.toLowerCase().includes(q))
+    displayAlready = alreadyMatched.filter(p => p.full_name?.toLowerCase().includes(q))
   } else {
     displayMatching = matching
     displayOthers = []
+    displayAlready = alreadyMatched
   }
 
   container.innerHTML = [
     ...displayMatching.map(p => renderPioniere(p, true)),
     !q && matching.length === 0 ? '<p class="text-sm text-marea-gray py-3">Nessun Pioniere con questa competenza.</p>' : '',
     ...displayOthers.map(p => renderPioniere(p, false)),
-    q && displayMatching.length === 0 && displayOthers.length === 0 ? '<p class="text-sm text-marea-gray py-3">Nessun risultato.</p>' : '',
+    displayAlready.length > 0 ? `<div class="opacity-50 pointer-events-none space-y-3 mt-2">${displayAlready.map(p => renderPioniere(p, false)).join('')}</div>` : '',
+    q && displayMatching.length === 0 && displayOthers.length === 0 && displayAlready.length === 0 ? '<p class="text-sm text-marea-gray py-3">Nessun risultato.</p>' : '',
   ].join('')
 
   container.querySelectorAll('.pioniere-match-card').forEach(card => {
     card.addEventListener('click', () => {
       const p = pionieri.find(p => p.id === card.dataset.pioniereId)
-      if (p && selectedNeed) openCreateMatchModal(p, selectedNeed)
+      if (p && selectedNeed && !alreadyMatchedIds.has(p.id)) openCreateMatchModal(p, selectedNeed)
+    })
+  })
+
+  container.querySelectorAll('.match-info-trigger').forEach(el => {
+    let tooltip = null
+    el.addEventListener('mouseenter', () => {
+      const details = el.dataset.details.split('|||')
+      tooltip = document.createElement('div')
+      tooltip.className = 'absolute z-50 bg-marea-navy text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap'
+      tooltip.innerHTML = details.map(d => escapeHtml(d)).join('<br>')
+      el.style.position = 'relative'
+      el.appendChild(tooltip)
+      tooltip.style.top = `${el.offsetHeight + 4}px`
+      tooltip.style.left = '0'
+    })
+    el.addEventListener('mouseleave', () => {
+      tooltip?.remove()
+      tooltip = null
     })
   })
 }
@@ -368,7 +386,8 @@ function openCreateMatchModal(pioniere, need) {
         <div class="p-4 rounded-xl bg-amber-50/50 border border-amber-200/30">
           <p class="text-xs text-marea-gray mb-1.5 uppercase tracking-wide">Esigenza</p>
           <p class="font-semibold text-sm text-marea-black">${escapeHtml(need.project?.name) || ''}</p>
-          <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(need.skill?.name) || ''} · ${need.hours_needed ? need.hours_needed + ' ore' : ''}</p>
+          <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(need.skill?.name) || ''}${need.hours_needed ? ' · ' + need.hours_needed + ' ore' : ''}</p>
+          ${need.description ? `<p class="text-xs text-marea-gray mt-2 leading-relaxed line-clamp-3">${escapeHtml(need.description)}</p>` : ''}
         </div>
       </div>
       <form id="create-match-form">
@@ -405,11 +424,8 @@ function openCreateMatchModal(pioniere, need) {
       })
       if (error) throw error
 
-      await supabase.from('project_needs').update({ status: 'matched' }).eq('id', need.id)
-
       closeModal()
-      selectedNeed = null
-      await Promise.all([loadOpenNeeds(), loadMatches()])
+      await Promise.all([loadOpenNeeds(), loadPionieri(), loadMatches()])
       renderPionieriList()
     } catch (err) {
       unlock()
@@ -449,52 +465,94 @@ function renderMatchesList() {
     return
   }
 
-  container.innerHTML = filtered.map(m => `
-    <div class="bg-white rounded-2xl border border-marea-border/60 p-5 card-hover">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1.5">
-            <div class="w-7 h-7 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-              <span class="text-marea-teal font-bold text-[10px]">${escapeHtml(getInitials(m.pioniere?.full_name))}</span>
-            </div>
-            <span class="font-semibold text-marea-black text-sm">${escapeHtml(m.pioniere?.full_name) || '—'}</span>
-            <span class="w-6 h-6 rounded-full bg-marea-yellow flex items-center justify-center flex-shrink-0"><svg class="w-3.5 h-3.5 text-marea-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg></span>
-            <span class="font-semibold text-marea-black text-sm">${escapeHtml(m.need?.project?.name) || '—'}</span>
-          </div>
-          <div class="flex flex-wrap items-center gap-2 ml-9 mt-1">
-            ${m.need?.skill?.name ? `<span class="badge bg-marea-teal-light text-marea-teal">${escapeHtml(m.need.skill.name)}</span>` : ''}
-            ${m.need?.description ? `<p class="text-sm text-marea-gray">Esigenza: ${escapeHtml(m.need.description)}</p>` : ''}
-          </div>
-          ${m.notes ? `<p class="text-xs text-marea-gray/70 mt-3 ml-9 italic">Note: ${escapeHtml(m.notes)}</p>` : ''}
+  // Group matches by project, then by need
+  const grouped = {}
+  for (const m of filtered) {
+    const projKey = m.need?.project?.id || 'unknown'
+    if (!grouped[projKey]) grouped[projKey] = { name: m.need?.project?.name || '—', needs: {} }
+    const needKey = m.need?.id || 'unknown'
+    if (!grouped[projKey].needs[needKey]) {
+      grouped[projKey].needs[needKey] = {
+        skill: m.need?.skill?.name || '—',
+        description: m.need?.description || '',
+        urgency: m.need?.urgency,
+        matches: [],
+      }
+    }
+    grouped[projKey].needs[needKey].matches.push(m)
+  }
+
+  const renderMatchRow = (m) => `
+    <div class="flex items-center justify-between gap-3 py-2.5 px-4 hover:bg-marea-cream/30 transition-colors">
+      <div class="flex items-center gap-2.5 flex-1 min-w-0">
+        <div class="w-7 h-7 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
+          <span class="text-marea-teal font-bold text-[10px]">${escapeHtml(getInitials(m.pioniere?.full_name))}</span>
         </div>
-        <div class="flex items-center gap-3 ml-9 sm:ml-0">
-          <select class="match-status-select px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${escapeAttr(m.id)}">
-            <option value="proposed" ${m.status === 'proposed' ? 'selected' : ''}>Proposto</option>
-            <option value="confirmed" ${m.status === 'confirmed' ? 'selected' : ''}>Confermato</option>
-            <option value="active" ${m.status === 'active' ? 'selected' : ''}>In corso</option>
-            <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completato</option>
-          </select>
-          <button class="match-delete text-marea-gray hover:text-red-500 transition-colors" data-match-id="${escapeAttr(m.id)}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
-        </div>
+        <span class="font-semibold text-sm text-marea-black">${escapeHtml(m.pioniere?.full_name) || '—'}</span>
+        ${m.notes ? `<button type="button" class="match-note-btn text-xs text-marea-gray hover:text-marea-black transition-colors flex-shrink-0" data-match-id="${escapeAttr(m.id)}">1 nota</button>` : ''}
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <button class="match-delete text-marea-gray hover:text-red-500 transition-colors" data-match-id="${escapeAttr(m.id)}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+        <select class="match-status-select px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${escapeAttr(m.id)}">
+          <option value="proposed" ${m.status === 'proposed' ? 'selected' : ''}>Proposto</option>
+          <option value="confirmed" ${m.status === 'confirmed' ? 'selected' : ''}>Confermato</option>
+          <option value="active" ${m.status === 'active' ? 'selected' : ''}>In corso</option>
+          <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completato</option>
+        </select>
       </div>
     </div>
-  `).join('')
+  `
+
+  container.innerHTML = Object.values(grouped).map(group => {
+    const needs = Object.values(group.needs)
+    const totalPionieri = new Set(needs.flatMap(n => n.matches.map(m => m.pioniere_id))).size
+    return `
+    <div class="rounded-2xl border border-marea-border/60 bg-marea-cream/30 overflow-hidden">
+      <button type="button" class="project-group-toggle flex items-center gap-2 w-full text-left px-4 py-3">
+        <svg class="w-4 h-4 text-marea-gray transition-transform rotate-90 project-group-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <span class="font-semibold text-base text-marea-black">${escapeHtml(group.name)}</span>
+        <span class="badge bg-marea-navy/10 text-marea-navy font-semibold">${needs.length} esigenz${needs.length === 1 ? 'a' : 'e'}</span>
+        <span class="badge bg-marea-navy/10 text-marea-navy font-semibold">${totalPionieri} pionier${totalPionieri === 1 ? 'e' : 'i'}</span>
+      </button>
+      <div class="project-group-content">
+        ${needs.map(need => {
+          const count = need.matches.length
+          return `
+          <div class="border-t border-marea-border/40">
+            <div class="flex items-center justify-between gap-2 px-4 py-2.5 bg-white/60">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="badge bg-marea-teal-light text-marea-teal">${escapeHtml(need.skill)}</span>
+                ${need.description ? `<span class="text-xs text-marea-gray truncate">${escapeHtml(need.description)}</span>` : ''}
+              </div>
+            </div>
+            <div class="divide-y divide-marea-border/20 bg-white">
+              ${need.matches.map(renderMatchRow).join('')}
+            </div>
+          </div>
+        `}).join('')}
+      </div>
+    </div>
+  `}).join('')
+
+  // Project group accordion toggle
+  container.querySelectorAll('.project-group-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const content = btn.nextElementSibling
+      const chevron = btn.querySelector('.project-group-chevron')
+      content?.classList.toggle('hidden')
+      chevron?.classList.toggle('rotate-90')
+    })
+  })
 
   container.querySelectorAll('.match-status-select').forEach(select => {
     select.addEventListener('change', async () => {
       try {
         await supabase.from('matches').update({ status: select.value }).eq('id', select.dataset.matchId)
 
-        if (select.value === 'completed') {
-          const match = allMatches.find(m => m.id === select.dataset.matchId)
-          if (match?.need?.id) {
-            await supabase.from('project_needs').update({ status: 'fulfilled' }).eq('id', match.need.id)
-          }
-        }
-
-        await loadMatches()
+        await Promise.all([loadMatches(), loadPionieri()])
+        renderPionieriList()
       } catch (err) {
         console.error('Errore:', err)
       showAlert('Si è verificato un errore. Riprova.')
@@ -506,23 +564,10 @@ function renderMatchesList() {
     btn.addEventListener('click', () => {
       showConfirm('Eliminare questo abbinamento?', async () => {
         try {
-          const match = allMatches.find(m => m.id === btn.dataset.matchId)
           await supabase.from('matches').delete().eq('id', btn.dataset.matchId)
 
-          // Only revert need to 'open' if no other active matches remain for it
-          if (match?.need?.id) {
-            const { data: remaining } = await supabase
-              .from('matches')
-              .select('id')
-              .eq('project_need_id', match.need.id)
-              .in('status', ['proposed', 'confirmed', 'active'])
-              .limit(1)
-            if (!remaining || remaining.length === 0) {
-              await supabase.from('project_needs').update({ status: 'open' }).eq('id', match.need.id)
-            }
-          }
-
-          await Promise.all([loadMatches(), loadOpenNeeds()])
+          await Promise.all([loadMatches(), loadPionieri()])
+          renderPionieriList()
         } catch (err) {
           console.error('Errore:', err)
           showAlert('Si è verificato un errore. Riprova.')
@@ -530,5 +575,61 @@ function renderMatchesList() {
       })
     })
   })
+
+  container.querySelectorAll('.match-note-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const match = allMatches.find(m => m.id === btn.dataset.matchId)
+      if (match) openMatchNoteModal(match)
+    })
+  })
+}
+
+function openMatchNoteModal(match) {
+  const content = `
+    <form id="match-note-form" class="space-y-4">
+      <textarea name="notes" rows="4" placeholder="Aggiungi una nota..."
+                oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                class="w-full px-4 py-3 rounded-xl border border-marea-border text-sm focus-ring transition-all resize-none overflow-hidden">${escapeHtml(match.notes || '')}</textarea>
+      <div class="flex items-center justify-between">
+        ${match.notes ? `<button type="button" id="delete-note-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina nota</button>` : '<div></div>'}
+        <button type="submit" class="btn-gold py-2 px-5">Salva</button>
+      </div>
+    </form>
+  `
+
+  showModal(renderModal({ title: `Nota — ${escapeHtml(match.pioniere?.full_name) || ''}`, content }))
+
+  document.getElementById('delete-note-btn')?.addEventListener('click', () => {
+    closeModal()
+    showConfirm('Eliminare questa nota?', async () => {
+      try {
+        const { error } = await supabase.from('matches').update({ notes: null }).eq('id', match.id)
+        if (error) throw error
+        await loadMatches()
+      } catch (err) {
+        console.error('Errore:', err)
+        showAlert('Si è verificato un errore. Riprova.')
+      }
+    })
+  })
+
+  document.getElementById('match-note-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const notes = new FormData(e.target).get('notes') || null
+
+    try {
+      const { error } = await supabase.from('matches').update({ notes }).eq('id', match.id)
+      if (error) throw error
+      closeModal()
+      await loadMatches()
+    } catch (err) {
+      console.error('Errore:', err)
+      showAlert('Si è verificato un errore. Riprova.')
+    }
+  })
+
+  // Auto-size textarea on open
+  const ta = document.querySelector('#match-note-form textarea')
+  if (ta && ta.value) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px' }
 }
 

@@ -73,8 +73,7 @@ function renderProjectList() {
           <select id="filter-status" class="px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
             <option value="">Tutti gli stati</option>
             <option value="active">Attivo</option>
-            <option value="paused">In pausa</option>
-            <option value="completed">Completato</option>
+            <option value="completed">Non attivo</option>
           </select>
         </div>
         <button id="add-project-btn" class="btn-gold">
@@ -94,7 +93,7 @@ async function loadProjects() {
   try {
     const { data, error } = await supabase
       .from('projects')
-      .select('*, project_needs(id, skill_id, description, hours_needed, urgency, status, skill:skills(id, name))')
+      .select('*, project_needs(id, skill_id, description, hours_needed, urgency, status, skill:skills(id, name), matches:matches(id, status, pioniere:pionieri(id, full_name)))')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -121,7 +120,7 @@ function renderList() {
   if (filterType) filtered = filtered.filter(p => p.type === filterType)
   if (filterStatus) filtered = filtered.filter(p => p.status === filterStatus)
 
-  const urgentCount = p => (p.project_needs || []).filter(n => n.urgency === 'high' && n.status === 'open').length
+  const urgentCount = p => (p.project_needs || []).filter(n => n.urgency === 'high' && (n.status === 'open' || n.status === 'matched')).length
 
   if (filtered.length === 0) {
     container.innerHTML = `
@@ -138,15 +137,14 @@ function renderList() {
 
   if (isFiltered) {
     // Flat grid when filters are active
-    const statusStripeMap = { active: 'border-l-emerald-500', paused: 'border-l-orange-400', completed: 'border-l-marea-teal' }
+    const statusStripeMap = { active: 'border-l-emerald-500', completed: 'border-l-marea-teal' }
     filtered.sort((a, b) => urgentCount(b) - urgentCount(a))
     container.innerHTML = `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${filtered.map(p => renderProjectCard(p, statusStripeMap[p.status] || 'border-l-marea-teal')).join('')}</div>`
   } else {
     // Grouped accordions when no filters
     const statusGroups = [
       { key: 'active', label: 'Attivi', dot: 'bg-emerald-500', stripe: 'border-l-emerald-500' },
-      { key: 'paused', label: 'In pausa', dot: 'bg-orange-400', stripe: 'border-l-orange-400' },
-      { key: 'completed', label: 'Completati', dot: 'bg-marea-teal', stripe: 'border-l-marea-teal' },
+      { key: 'completed', label: 'Non attivi', dot: 'bg-marea-teal', stripe: 'border-l-marea-teal' },
     ]
 
     container.innerHTML = statusGroups.map(g => {
@@ -154,13 +152,13 @@ function renderList() {
       const isOpen = items.length > 0
       return `
         <div class="status-group" data-status="${g.key}">
-          <button type="button" class="status-group-toggle w-full flex items-center gap-3 py-3.5 px-4 text-left rounded-xl hover:bg-marea-cream/60 transition-colors cursor-pointer">
+          <button type="button" class="status-group-toggle w-full flex items-center gap-3 py-3.5 text-left rounded-xl hover:bg-marea-cream/60 transition-colors cursor-pointer">
             <svg class="w-5 h-5 text-marea-gray transition-transform ${isOpen ? 'rotate-90' : ''} group-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             <span class="w-3 h-3 rounded-full ${g.dot}"></span>
             <span class="text-base font-semibold text-marea-black">${g.label}</span>
             <span class="text-xs font-semibold text-marea-black bg-gray-200 rounded-full px-2.5 py-0.5">${items.length}</span>
           </button>
-          <div class="status-group-content ${isOpen ? '' : 'hidden'} mt-1 pl-4 sm:pl-7 pb-2">
+          <div class="status-group-content ${isOpen ? '' : 'hidden'} mt-1 pb-2">
             ${items.length === 0
               ? `<p class="text-xs text-marea-gray/70 italic py-2">Nessun progetto</p>`
               : `<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${items.map(p => renderProjectCard(p, g.stripe)).join('')}</div>`}
@@ -198,9 +196,7 @@ function renderList() {
         showAlert('Errore nell\'aggiornamento dello stato')
         return
       }
-      const proj = allProjects.find(p => p.id === id)
-      if (proj) proj.status = newStatus
-      renderList()
+      await loadProjects()
     })
   })
 }
@@ -260,7 +256,7 @@ async function initProjectDetail(projectId) {
   try {
     const { data, error } = await supabase
       .from('projects')
-      .select('*, project_needs(id, skill_id, description, hours_needed, urgency, status, skill:skills(id, name))')
+      .select('*, project_needs(id, skill_id, description, hours_needed, urgency, status, skill:skills(id, name), matches:matches(id, status, pioniere:pionieri(id, full_name)))')
       .eq('id', projectId)
       .single()
 
@@ -286,12 +282,10 @@ function renderDetailContent(project) {
   if (!container) return
 
   const needs = project.project_needs || []
-  const openNeeds = needs.filter(n => n.status === 'open').length
-  const matchedNeeds = needs.filter(n => n.status === 'matched').length
-  const fulfilledNeeds = needs.filter(n => n.status === 'fulfilled').length
+  const openNeeds = needs.filter(n => n.status === 'open' || n.status === 'matched').length
   const totalHours = needs.reduce((sum, n) => sum + (n.hours_needed || 0), 0)
 
-  const statusDot = { active: 'bg-emerald-500', paused: 'bg-orange-400', completed: 'bg-marea-teal' }[project.status] || 'bg-gray-400'
+  const statusDot = { active: 'bg-emerald-500', completed: 'bg-marea-teal' }[project.status] || 'bg-gray-400'
 
   container.innerHTML = `
     <div id="project-info" class="bg-white rounded-2xl border border-marea-border/60 p-6 mb-8">
@@ -345,8 +339,7 @@ function renderDetailContent(project) {
             <label class="block text-xs font-medium text-marea-gray mb-1.5 uppercase tracking-wide">Stato</label>
             <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all">
               <option value="active" ${project.status === 'active' ? 'selected' : ''}>Attivo</option>
-              <option value="paused" ${project.status === 'paused' ? 'selected' : ''}>In pausa</option>
-              <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completato</option>
+              <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Non attivo</option>
             </select>
           </div>
         </div>
@@ -390,7 +383,7 @@ function renderDetailContent(project) {
   const reloadDetail = async () => {
     const { data } = await supabase
       .from('projects')
-      .select('*, project_needs(id, skill_id, description, hours_needed, urgency, status, skill:skills(id, name))')
+      .select('*, project_needs(id, skill_id, description, hours_needed, urgency, status, skill:skills(id, name), matches:matches(id, status, pioniere:pionieri(id, full_name)))')
       .eq('id', project.id)
       .single()
     if (data) {
@@ -467,15 +460,35 @@ function renderDetailContent(project) {
       if (need) openNeedForm(project, reloadDetail, need)
     })
   })
+
+  document.querySelectorAll('.need-matches-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const need = needs.find(n => n.id === btn.dataset.needId)
+      if (need) openNeedMatchesModal(need, reloadDetail)
+    })
+  })
+
+  document.querySelectorAll('.need-status-select').forEach(select => {
+    select.addEventListener('change', async (e) => {
+      e.stopPropagation()
+      const { error } = await supabase.from('project_needs').update({ status: select.value }).eq('id', select.dataset.needId)
+      if (error) {
+        showAlert('Errore nell\'aggiornamento dello stato')
+        return
+      }
+      await reloadDetail()
+    })
+  })
 }
 
 function renderProjectCard(p, stripe) {
-  const openNeeds = (p.project_needs || []).filter(n => n.status === 'open').length
+  const openNeeds = (p.project_needs || []).filter(n => n.status === 'open' || n.status === 'matched').length
   const totalNeeds = (p.project_needs || []).length
   const coveredNeeds = totalNeeds - openNeeds
   const pct = totalNeeds > 0 ? Math.round((coveredNeeds / totalNeeds) * 100) : 0
   const barColor = pct === 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-marea-teal' : 'bg-marea-border'
-  const highUrgentOpen = (p.project_needs || []).filter(n => n.urgency === 'high' && n.status === 'open').length
+  const highUrgentOpen = (p.project_needs || []).filter(n => n.urgency === 'high' && (n.status === 'open' || n.status === 'matched')).length
   const uniqueSkills = [...new Map((p.project_needs || []).filter(n => n.skill?.name).map(n => [n.skill.id, n.skill.name])).values()]
   const visibleSkills = uniqueSkills.slice(0, 4)
   const extraCount = uniqueSkills.length - 4
@@ -506,8 +519,7 @@ function renderProjectCard(p, stripe) {
         <div class="flex justify-end mt-auto pt-1">
           <select class="status-select text-sm px-3 py-2 rounded-xl border border-marea-border bg-white text-marea-black font-medium focus-ring cursor-pointer" data-project-id="${escapeAttr(p.id)}">
             <option value="active" ${p.status === 'active' ? 'selected' : ''}>Attivo</option>
-            <option value="paused" ${p.status === 'paused' ? 'selected' : ''}>In pausa</option>
-            <option value="completed" ${p.status === 'completed' ? 'selected' : ''}>Completato</option>
+            <option value="completed" ${p.status === 'completed' ? 'selected' : ''}>Non attivo</option>
           </select>
         </div>
       </div>
@@ -518,13 +530,13 @@ function renderProjectCard(p, stripe) {
 function renderNeedsGrouped(needs) {
   const groups = [
     { key: 'open', label: 'Aperte', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-blue-600' },
-    { key: 'matched', label: 'Matched', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', color: 'text-amber-600' },
     { key: 'fulfilled', label: 'Soddisfatte', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-emerald-600' },
   ]
 
   return groups.map(g => {
     const urgencyOrder = { high: 0, medium: 1, low: 2 }
-    const items = needs.filter(n => n.status === g.key).sort((a, b) => (urgencyOrder[a.urgency] ?? 3) - (urgencyOrder[b.urgency] ?? 3))
+    // Treat 'matched' as 'open' since status is now derived from matches
+    const items = needs.filter(n => g.key === 'open' ? (n.status === 'open' || n.status === 'matched') : n.status === g.key).sort((a, b) => (urgencyOrder[a.urgency] ?? 3) - (urgencyOrder[b.urgency] ?? 3))
     const isOpen = items.length > 0
     return `
       <div class="needs-group" data-status="${g.key}">
@@ -546,23 +558,80 @@ function renderNeedsGrouped(needs) {
 
 function renderNeedCard(need) {
   const borderColor = { high: 'border-l-red-400', medium: 'border-l-amber-400', low: 'border-l-gray-300' }[need.urgency] || 'border-l-gray-300'
+  const totalMatches = (need.matches || []).length
+  const needStatus = need.status === 'fulfilled' ? 'fulfilled' : 'open'
   return `
     <div class="need-card flex items-center gap-3 p-3 rounded-xl border border-marea-border/60 border-l-[3px] ${borderColor} bg-white" data-need-id="${escapeAttr(need.id)}">
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-medium text-marea-black">${escapeHtml(need.skill?.name) || '—'}</span>
-        ${need.description ? `<p class="text-xs text-marea-gray mt-0.5 truncate">${escapeHtml(need.description)}</p>` : ''}
+        <div class="flex items-start gap-2">
+          <span class="badge ${urgencyBadge(need.urgency)} mt-0.5 flex-shrink-0">${urgencyLabel(need.urgency)}</span>
+          <div class="min-w-0">
+            <span class="text-sm font-medium text-marea-black">${escapeHtml(need.skill?.name) || '—'}</span>
+            <p class="text-xs text-marea-gray mt-0.5 truncate">${[need.description, need.hours_needed ? need.hours_needed + 'h' : ''].filter(Boolean).map(s => escapeHtml(s)).join(' · ')}</p>
+          </div>
+        </div>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
-        <span class="badge ${urgencyBadge(need.urgency)}">${urgencyLabel(need.urgency)}</span>
-        ${need.hours_needed ? `<span class="text-xs font-medium text-marea-gray">${need.hours_needed}h</span>` : ''}
+        ${totalMatches > 0 ? `
+          <button type="button" class="need-matches-btn w-8 h-8 rounded-lg flex items-center justify-center bg-marea-yellow/20 hover:bg-marea-yellow/40 transition-all flex-shrink-0 relative" data-need-id="${escapeAttr(need.id)}" title="Vedi match">
+            <svg class="w-4 h-4 text-marea-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-marea-yellow text-marea-navy text-[9px] font-bold flex items-center justify-center">${totalMatches}</span>
+          </button>
+        ` : ''}
         <button type="button" class="need-edit w-8 h-8 rounded-lg flex items-center justify-center text-marea-gray hover:text-marea-navy hover:bg-marea-yellow transition-all flex-shrink-0" data-need-id="${escapeAttr(need.id)}" title="Modifica">
           <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
         </button>
+        <select class="need-status-select text-xs px-2 py-1 rounded-lg border border-marea-border bg-white text-marea-black focus-ring cursor-pointer" data-need-id="${escapeAttr(need.id)}">
+          <option value="open" ${needStatus === 'open' ? 'selected' : ''}>Aperta</option>
+          <option value="fulfilled" ${needStatus === 'fulfilled' ? 'selected' : ''}>Soddisfatta</option>
+        </select>
       </div>
     </div>
   `
 }
 
+
+function openNeedMatchesModal(need, reloadDetail) {
+  const matches = need.matches || []
+
+  const content = `
+    <div class="space-y-4">
+      ${matches.map(m => `
+        <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-marea-border/60 bg-white">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-marea-teal/10 flex items-center justify-center flex-shrink-0">
+              <span class="text-marea-teal font-bold text-xs">${escapeHtml((m.pioniere?.full_name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase())}</span>
+            </div>
+            <span class="font-medium text-sm text-marea-black truncate">${escapeHtml(m.pioniere?.full_name) || '—'}</span>
+          </div>
+          <select class="modal-match-status px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${escapeAttr(m.id)}">
+            <option value="proposed" ${m.status === 'proposed' ? 'selected' : ''}>Proposto</option>
+            <option value="confirmed" ${m.status === 'confirmed' ? 'selected' : ''}>Confermato</option>
+            <option value="active" ${m.status === 'active' ? 'selected' : ''}>In corso</option>
+            <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completato</option>
+          </select>
+        </div>
+      `).join('')}
+    </div>
+  `
+
+  showModal(renderModal({ title: `Match — ${escapeHtml(need.skill?.name) || 'Esigenza'}`, content, size: 'xl' }))
+
+  document.querySelectorAll('.modal-match-status').forEach(select => {
+    select.addEventListener('change', async () => {
+      const { error } = await supabase.from('matches').update({ status: select.value }).eq('id', select.dataset.matchId)
+      if (error) {
+        showAlert('Errore nell\'aggiornamento dello stato')
+        return
+      }
+      // Update the local match object so the modal stays consistent
+      const match = matches.find(m => m.id === select.dataset.matchId)
+      if (match) match.status = select.value
+      // Reload the project detail behind the modal so the card reflects changes
+      if (reloadDetail) await reloadDetail()
+    })
+  })
+}
 
 // --- Forms ---
 
@@ -587,8 +656,7 @@ function openProjectForm(project = null, onSave = null) {
           <label class="block text-sm font-medium text-marea-black mb-1.5">Stato</label>
           <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
             <option value="active" ${project?.status === 'active' ? 'selected' : ''}>Attivo</option>
-            <option value="paused" ${project?.status === 'paused' ? 'selected' : ''}>In pausa</option>
-            <option value="completed" ${project?.status === 'completed' ? 'selected' : ''}>Completato</option>
+            <option value="completed" ${project?.status === 'completed' ? 'selected' : ''}>Non attivo</option>
           </select>
         </div>
       </div>
@@ -600,7 +668,7 @@ function openProjectForm(project = null, onSave = null) {
       </div>
       <div class="flex items-center justify-between pt-3 border-t border-marea-border/60">
         <div>
-          ${isEdit ? `<button type="button" id="delete-project-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina</button>` : ''}
+          ${isEdit ? `<button type="button" id="delete-project-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina progetto</button>` : ''}
         </div>
         <div class="flex gap-3">
           <button type="button" class="cancel-modal-btn btn-outline py-2 px-5">Annulla</button>
@@ -700,21 +768,10 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
           </select>
         </div>
       </div>
-      ${isEdit ? `
-        <div>
-          <label class="block text-sm font-medium text-marea-black mb-1.5">Stato</label>
-          <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all">
-            <option value="open" ${existingNeed?.status === 'open' ? 'selected' : ''}>Aperta</option>
-            <option value="matched" ${existingNeed?.status === 'matched' ? 'selected' : ''}>Abbinata</option>
-            <option value="fulfilled" ${existingNeed?.status === 'fulfilled' ? 'selected' : ''}>Soddisfatta</option>
-          </select>
-        </div>
-      ` : ''}
-      <div class="flex justify-end gap-3 pt-3 border-t border-marea-border/60">
-        ${isEdit ? `<button type="button" id="delete-need-btn" class="inline-flex items-center gap-2 py-2.5 px-6 rounded-full text-sm font-semibold bg-orange-500 text-white hover:brightness-110 transition-all">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          Elimina
-        </button>` : `<button type="button" class="cancel-modal-btn btn-outline py-2 px-5">Annulla</button>`}
+      <div class="flex items-center ${isEdit ? 'justify-between' : 'justify-end gap-3'} pt-3 border-t border-marea-border/60">
+        ${isEdit ? `
+          <button type="button" id="delete-need-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina esigenza</button>
+        ` : `<button type="button" class="cancel-modal-btn btn-outline py-2 px-5">Annulla</button>`}
         <button type="submit" class="btn-gold py-2 px-5">${isEdit ? 'Salva modifiche' : 'Aggiungi esigenza'}</button>
       </div>
     </form>
@@ -742,7 +799,6 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
 
     try {
       if (isEdit) {
-        record.status = fd.get('status')
         const { error } = await supabase.from('project_needs').update(record).eq('id', existingNeed.id)
         if (error) throw error
       } else {
@@ -781,11 +837,12 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
         }
       })
     })
+
   }
 }
 
 // --- Helpers ---
 
 function statusLabel(status) {
-  return { active: 'Attivo', paused: 'In pausa', completed: 'Completato' }[status] || status
+  return { active: 'Attivo', completed: 'Non attivo' }[status] || status
 }
