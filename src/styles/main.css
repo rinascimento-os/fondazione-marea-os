@@ -134,18 +134,9 @@ select {
 /* Stat card decorative top border */
 .stat-card {
   position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-marea-teal), var(--color-marea-yellow));
-  border-radius: 1rem 1rem 0 0;
+  background:
+    linear-gradient(90deg, var(--color-marea-teal), var(--color-marea-yellow)) top / 100% 3px no-repeat,
+    white;
 }
 
 /* Tooltip */
@@ -167,7 +158,9 @@ select {
   font-weight: 400;
   padding: 0.375rem 0.625rem;
   border-radius: 0.5rem;
-  white-space: nowrap;
+  white-space: normal;
+  width: max-content;
+  max-width: 220px;
   pointer-events: none;
   transition: opacity 0.15s ease, visibility 0.15s ease;
   z-index: 50;

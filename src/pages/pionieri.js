@@ -324,7 +324,7 @@ function openPioniereForm(pioniere = null) {
     <div class="flex items-center ${isEdit ? 'justify-between' : 'justify-end'} pt-4 pb-1 mt-6 border-t border-marea-border/60 sticky bottom-0 bg-white">
       ${isEdit ? `<button type="button" id="delete-pioniere-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina pioniere</button>` : ''}
       <button type="submit" form="pioniere-form" class="btn-gold py-2.5 px-6">
-        ${isEdit ? 'Salva modifiche' : 'Aggiungi'}
+        ${isEdit ? 'Salva modifiche' : 'Salva'}
       </button>
     </div>
   `
