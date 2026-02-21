@@ -204,10 +204,7 @@ function renderList() {
           await supabase.from('matches').update({ status: 'completed' }).in('project_need_id', needIds.map(n => n.id)).in('status', ['proposed', 'confirmed', 'active'])
         }
       }
-      const proj = allProjects.find(p => p.id === id)
-      if (proj) proj.status = newStatus
       await loadProjects()
-      renderList()
     })
   })
 }
@@ -294,7 +291,6 @@ function renderDetailContent(project) {
 
   const needs = project.project_needs || []
   const openNeeds = needs.filter(n => n.status === 'open' || n.status === 'matched').length
-  const fulfilledNeeds = needs.filter(n => n.status === 'fulfilled').length
   const totalHours = needs.reduce((sum, n) => sum + (n.hours_needed || 0), 0)
 
   const statusDot = { active: 'bg-emerald-500', completed: 'bg-marea-teal' }[project.status] || 'bg-gray-400'
@@ -717,8 +713,6 @@ function openNeedForm(project, onSave = null, existingNeed = null) {
       ${isEdit ? (() => {
         const matches = existingNeed?.matches || []
         const statusLabels = { proposed: 'Proposto', confirmed: 'Confermato', active: 'In corso', completed: 'Completato' }
-        const activeMatches = matches.filter(m => ['proposed', 'confirmed', 'active'].includes(m.status))
-        const completedMatches = matches.filter(m => m.status === 'completed')
         const hasMatches = matches.length > 0
         return `
         <div>

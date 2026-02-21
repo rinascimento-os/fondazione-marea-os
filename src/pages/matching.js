@@ -203,6 +203,13 @@ function renderNeedsList() {
     return renderNeedCard(group.needs[0], true)
   }).join('')
 
+  // If selected need is no longer in the visible list, clear selection
+  if (selectedNeed && !filtered.find(n => n.id === selectedNeed.id)) {
+    selectedNeed = null
+    renderPionieriList()
+  }
+  lockNeedsPanel()
+
   container.querySelectorAll('.need-card').forEach(card => {
     card.addEventListener('click', () => {
       const clickedNeed = openNeeds.find(n => n.id === card.dataset.needId) || filtered.find(n => n.id === card.dataset.needId)
@@ -588,6 +595,7 @@ function renderMatchesList() {
           }
 
           await Promise.all([loadMatches(), loadOpenNeeds(), loadPionieri()])
+          renderPionieriList()
         } catch (err) {
           console.error('Errore:', err)
           showAlert('Si è verificato un errore. Riprova.')
