@@ -167,14 +167,13 @@ export async function initDashboard() {
   destroyCharts()
 
   try {
-    const [pionieri, projects, matches, timeEntries, allMatches, skills, needs] = await Promise.all([
+    const [pionieri, projects, timeEntries, allMatches, skills, needs] = await Promise.all([
       supabase.from('pionieri').select('id', { count: 'exact', head: true }),
       supabase.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('matches').select('id', { count: 'exact', head: true }).in('status', ['proposed', 'confirmed', 'active']),
       supabase.from('time_entries').select('hours, date'),
-      supabase.from('matches').select('status'),
+      supabase.from('matches').select('status, need:project_needs(status, project:projects(status))'),
       supabase.from('pioniere_skills').select('skill:skills(name)'),
-      supabase.from('project_needs').select('urgency, status').eq('status', 'open'),
+      supabase.from('project_needs').select('urgency, status, project:projects(status)').eq('status', 'open'),
     ])
 
     const el = (id) => document.getElementById(id)
@@ -182,7 +181,14 @@ export async function initDashboard() {
     // --- Stat cards ---
     if (el('stat-pionieri')) el('stat-pionieri').textContent = pionieri.count ?? 0
     if (el('stat-projects')) el('stat-projects').textContent = projects.count ?? 0
-    if (el('stat-matches')) el('stat-matches').textContent = matches.count ?? 0
+
+    // Active matches: only count those under active projects and non-fulfilled needs
+    const activeMatchCount = (allMatches.data || []).filter(m =>
+      ['proposed', 'confirmed', 'active'].includes(m.status) &&
+      m.need?.project?.status !== 'completed' &&
+      m.need?.status !== 'fulfilled'
+    ).length
+    if (el('stat-matches')) el('stat-matches').textContent = activeMatchCount
 
     const totalHours = (timeEntries.data || []).reduce((sum, e) => sum + (parseFloat(e.hours) || 0), 0)
     if (el('stat-hours')) el('stat-hours').textContent = totalHours > 0 ? totalHours.toFixed(1) : '0'
@@ -190,14 +196,16 @@ export async function initDashboard() {
     // --- Chart: Hours over time ---
     buildHoursChart(timeEntries.data || [])
 
-    // --- Chart: Match status ---
-    buildMatchStatusChart(allMatches.data || [])
+    // --- Chart: Match status --- (only matches under active projects)
+    const effectiveMatches = (allMatches.data || []).filter(m => m.need?.project?.status !== 'completed')
+    buildMatchStatusChart(effectiveMatches)
 
     // --- Chart: Skills distribution ---
     buildSkillsChart(skills.data || [])
 
-    // --- Chart: Needs urgency ---
-    buildUrgencyChart(needs.data || [])
+    // --- Chart: Needs urgency --- (only needs under active projects)
+    const effectiveNeeds = (needs.data || []).filter(n => n.project?.status !== 'completed')
+    buildUrgencyChart(effectiveNeeds)
 
     // --- Recent activity ---
     const { data: recentMatches } = await supabase

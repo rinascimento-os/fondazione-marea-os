@@ -98,11 +98,12 @@ async function loadOpenNeeds() {
   try {
     const { data } = await supabase
       .from('project_needs')
-      .select('*, skill:skills(id, name), project:projects(id, name)')
+      .select('*, skill:skills(id, name), project:projects(id, name, status)')
       .eq('status', 'open')
       .order('urgency')
 
-    openNeeds = data || []
+    // Exclude needs from completed projects
+    openNeeds = (data || []).filter(n => n.project?.status !== 'completed')
   } catch {
     openNeeds = []
   }
@@ -113,12 +114,16 @@ async function loadPionieri() {
   try {
     const { data } = await supabase
       .from('pionieri')
-      .select('*, pioniere_skills(skill_id, skill:skills(id, name)), matches(id, status)')
+      .select('*, pioniere_skills(skill_id, skill:skills(id, name)), matches(id, status, need:project_needs(id, status, project:projects(id, status)))')
       .order('full_name')
 
     pionieri = (data || []).map(p => ({
       ...p,
-      active_matches_count: (p.matches || []).filter(m => ['proposed', 'confirmed', 'active'].includes(m.status)).length,
+      active_matches_count: (p.matches || []).filter(m =>
+        ['proposed', 'confirmed', 'active'].includes(m.status) &&
+        m.need?.project?.status !== 'completed' &&
+        m.need?.status !== 'fulfilled'
+      ).length,
     }))
   } catch {
     pionieri = []
@@ -129,7 +134,7 @@ async function loadMatches() {
   try {
     const { data } = await supabase
       .from('matches')
-      .select('*, pioniere:pionieri(id, full_name, email, location), need:project_needs(id, description, hours_needed, skill:skills(name), project:projects(id, name))')
+      .select('*, pioniere:pionieri(id, full_name, email, location), need:project_needs(id, description, hours_needed, status, skill:skills(name), project:projects(id, name, status))')
       .order('created_at', { ascending: false })
 
     allMatches = data || []
@@ -272,7 +277,7 @@ function renderPionieriList() {
   const skillId = selectedNeed.skill_id
   const alreadyMatchedIds = new Set(
     allMatches
-      .filter(m => m.project_need_id === selectedNeed.id && ['proposed', 'confirmed', 'active'].includes(m.status))
+      .filter(m => m.project_need_id === selectedNeed.id && ['proposed', 'confirmed', 'active'].includes(m.status) && m.need?.project?.status !== 'completed' && m.need?.status !== 'fulfilled')
       .map(m => m.pioniere_id)
   )
   const matching = pionieri.filter(p =>
@@ -292,22 +297,20 @@ function renderPionieriList() {
     const roleCompany = [p.role, p.company].filter(Boolean).map(s => escapeHtml(s)).join(' · ')
     const isAvailable = p.active_matches_count === 0
     return `
-    <div class="${!isAvailable ? 'bg-white border-amber-300' : 'bg-white border-marea-teal/50'} rounded-xl border p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${escapeAttr(p.id)}">
+    <div class="bg-white border-marea-teal/50 rounded-xl border p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${escapeAttr(p.id)}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-3">
           <div class="w-9 h-9 rounded-full bg-marea-teal/10 flex items-center justify-center flex-shrink-0">
             <span class="text-marea-teal font-bold text-xs">${escapeHtml(getInitials(p.full_name))}</span>
           </div>
           <div>
-            <div class="flex items-center gap-2">
-              <p class="font-semibold text-sm text-marea-black">${escapeHtml(p.full_name)}</p>
-              ${!isAvailable ? (() => {
-                const activeMatchDetails = allMatches
-                  .filter(m => m.pioniere_id === p.id && ['proposed', 'confirmed', 'active'].includes(m.status))
-                  .map(m => [m.need?.project?.name, m.need?.skill?.name].filter(Boolean).join(' — '))
-                return `<span class="relative text-[11px] text-amber-700 font-medium match-info-trigger" data-details="${escapeAttr(activeMatchDetails.join('|||'))}">Impegnato in ${p.active_matches_count} match</span>`
-              })() : ''}
-            </div>
+            <p class="font-semibold text-sm text-marea-black">${escapeHtml(p.full_name)}</p>
+            ${!isAvailable ? (() => {
+              const activeMatchDetails = allMatches
+                .filter(m => m.pioniere_id === p.id && ['proposed', 'confirmed', 'active'].includes(m.status) && m.need?.project?.status !== 'completed' && m.need?.status !== 'fulfilled')
+                .map(m => [m.need?.project?.name, m.need?.skill?.name].filter(Boolean).join(' — '))
+              return `<span class="relative text-[11px] text-amber-700 font-medium match-info-trigger block mt-0.5" data-details="${escapeAttr(activeMatchDetails.join('|||'))}">Impegnato in ${p.active_matches_count} match</span>`
+            })() : ''}
             ${roleCompany ? `<p class="text-xs text-marea-gray mt-0.5">${roleCompany}</p>` : ''}
             <p class="text-xs text-marea-gray ${roleCompany ? '' : 'mt-0.5'}">${escapeHtml(p.location) || ''}</p>
             <div class="flex flex-wrap items-center gap-1.5 mt-2">
@@ -486,17 +489,18 @@ function renderMatchesList() {
           <span class="text-marea-teal font-bold text-[10px]">${escapeHtml(getInitials(m.pioniere?.full_name))}</span>
         </div>
         <span class="font-semibold text-sm text-marea-black">${escapeHtml(m.pioniere?.full_name) || '—'}</span>
+        ${m.notes ? `<button type="button" class="match-note-btn text-xs text-marea-gray hover:text-marea-black transition-colors flex-shrink-0" data-match-id="${escapeAttr(m.id)}">1 nota</button>` : ''}
       </div>
       <div class="flex items-center gap-3 flex-shrink-0">
+        <button class="match-delete text-marea-gray hover:text-red-500 transition-colors" data-match-id="${escapeAttr(m.id)}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
         <select class="match-status-select px-3 py-1.5 rounded-lg border border-marea-border text-xs focus-ring transition-all" data-match-id="${escapeAttr(m.id)}">
           <option value="proposed" ${m.status === 'proposed' ? 'selected' : ''}>Proposto</option>
           <option value="confirmed" ${m.status === 'confirmed' ? 'selected' : ''}>Confermato</option>
           <option value="active" ${m.status === 'active' ? 'selected' : ''}>In corso</option>
           <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completato</option>
         </select>
-        <button class="match-delete text-marea-gray hover:text-red-500 transition-colors" data-match-id="${escapeAttr(m.id)}">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-        </button>
       </div>
     </div>
   `
@@ -547,25 +551,7 @@ function renderMatchesList() {
       try {
         await supabase.from('matches').update({ status: select.value }).eq('id', select.dataset.matchId)
 
-        const match = allMatches.find(m => m.id === select.dataset.matchId)
-        if (match?.need?.id) {
-          const { data: active } = await supabase
-            .from('matches')
-            .select('id')
-            .eq('project_need_id', match.need.id)
-            .in('status', ['proposed', 'confirmed', 'active'])
-            .neq('id', match.id)
-            .limit(1)
-          const hasActive = (active && active.length > 0) || ['proposed', 'confirmed', 'active'].includes(select.value)
-          await supabase.from('project_needs').update({ status: hasActive ? 'open' : 'fulfilled' }).eq('id', match.need.id)
-
-          // If match went back to a non-completed state, revert the parent project to active
-          if (['proposed', 'confirmed', 'active'].includes(select.value) && match.need?.project?.id) {
-            await supabase.from('projects').update({ status: 'active' }).eq('id', match.need.project.id).eq('status', 'completed')
-          }
-        }
-
-        await Promise.all([loadMatches(), loadOpenNeeds(), loadPionieri()])
+        await Promise.all([loadMatches(), loadPionieri()])
         renderPionieriList()
       } catch (err) {
         console.error('Errore:', err)
@@ -578,23 +564,9 @@ function renderMatchesList() {
     btn.addEventListener('click', () => {
       showConfirm('Eliminare questo abbinamento?', async () => {
         try {
-          const match = allMatches.find(m => m.id === btn.dataset.matchId)
           await supabase.from('matches').delete().eq('id', btn.dataset.matchId)
 
-          // Only revert need to 'open' if no other active matches remain for it
-          if (match?.need?.id) {
-            const { data: remaining } = await supabase
-              .from('matches')
-              .select('id')
-              .eq('project_need_id', match.need.id)
-              .in('status', ['proposed', 'confirmed', 'active'])
-              .limit(1)
-            if (!remaining || remaining.length === 0) {
-              await supabase.from('project_needs').update({ status: 'open' }).eq('id', match.need.id)
-            }
-          }
-
-          await Promise.all([loadMatches(), loadOpenNeeds(), loadPionieri()])
+          await Promise.all([loadMatches(), loadPionieri()])
           renderPionieriList()
         } catch (err) {
           console.error('Errore:', err)
@@ -603,5 +575,61 @@ function renderMatchesList() {
       })
     })
   })
+
+  container.querySelectorAll('.match-note-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const match = allMatches.find(m => m.id === btn.dataset.matchId)
+      if (match) openMatchNoteModal(match)
+    })
+  })
+}
+
+function openMatchNoteModal(match) {
+  const content = `
+    <form id="match-note-form" class="space-y-4">
+      <textarea name="notes" rows="4" placeholder="Aggiungi una nota..."
+                oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                class="w-full px-4 py-3 rounded-xl border border-marea-border text-sm focus-ring transition-all resize-none overflow-hidden">${escapeHtml(match.notes || '')}</textarea>
+      <div class="flex items-center justify-between">
+        ${match.notes ? `<button type="button" id="delete-note-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina nota</button>` : '<div></div>'}
+        <button type="submit" class="btn-gold py-2 px-5">Salva</button>
+      </div>
+    </form>
+  `
+
+  showModal(renderModal({ title: `Nota — ${escapeHtml(match.pioniere?.full_name) || ''}`, content }))
+
+  document.getElementById('delete-note-btn')?.addEventListener('click', () => {
+    closeModal()
+    showConfirm('Eliminare questa nota?', async () => {
+      try {
+        const { error } = await supabase.from('matches').update({ notes: null }).eq('id', match.id)
+        if (error) throw error
+        await loadMatches()
+      } catch (err) {
+        console.error('Errore:', err)
+        showAlert('Si è verificato un errore. Riprova.')
+      }
+    })
+  })
+
+  document.getElementById('match-note-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const notes = new FormData(e.target).get('notes') || null
+
+    try {
+      const { error } = await supabase.from('matches').update({ notes }).eq('id', match.id)
+      if (error) throw error
+      closeModal()
+      await loadMatches()
+    } catch (err) {
+      console.error('Errore:', err)
+      showAlert('Si è verificato un errore. Riprova.')
+    }
+  })
+
+  // Auto-size textarea on open
+  const ta = document.querySelector('#match-note-form textarea')
+  if (ta && ta.value) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px' }
 }
 

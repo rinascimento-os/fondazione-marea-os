@@ -270,7 +270,7 @@ async function loadFormData() {
   const [matchesRes, pionieriRes, projectsRes] = await Promise.all([
     supabase
       .from('matches')
-      .select('id, status, pioniere:pionieri(id, full_name), need:project_needs(id, description, project:projects(id, name))')
+      .select('id, status, pioniere:pionieri(id, full_name), need:project_needs(id, description, status, project:projects(id, name, status))')
       .in('status', ['confirmed', 'active'])
       .order('created_at', { ascending: false }),
     supabase
@@ -283,7 +283,8 @@ async function loadFormData() {
       .order('name'),
   ])
 
-  allMatches = matchesRes.data || []
+  // Exclude matches under completed projects or fulfilled needs
+  allMatches = (matchesRes.data || []).filter(m => m.need?.project?.status !== 'completed' && m.need?.status !== 'fulfilled')
   allPionieri = pionieriRes.data || []
   allProjects = projectsRes.data || []
 }
@@ -585,7 +586,7 @@ function openLogHoursForm(existingEntry = null) {
     sublabel: p.location || undefined,
   }))
 
-  const projectOptions = allProjects.map(p => ({
+  const projectOptions = allProjects.filter(p => p.status !== 'completed').map(p => ({
     id: p.id,
     label: p.name,
     sublabel: p.type === 'onda_project' ? 'Onda' : 'Fondazione',
