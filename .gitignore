@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.DS_Store
+raw_data/
+CLAUDE.md
+sql_queries/
+test-*.csv
+brand_assets/main_website/

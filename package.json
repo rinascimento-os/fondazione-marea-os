@@ -1,0 +1,30 @@
+{
+  "name": "fondazione-marea-os",
+  "version": "1.0.0",
+  "description": "Piattaforma banca del tempo per Fondazione Marea",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rinascimento-os/fondazione-marea-os.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rinascimento-os/fondazione-marea-os/issues"
+  },
+  "homepage": "https://github.com/rinascimento-os/fondazione-marea-os#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
+    "@tailwindcss/vite": "^4.1.18",
+    "chart.js": "^4.5.1",
+    "tailwindcss": "^4.1.18",
+    "vite": "^7.3.1"
+  }
+}
