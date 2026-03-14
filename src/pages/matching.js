@@ -98,7 +98,7 @@ async function loadOpenNeeds() {
   try {
     const { data } = await supabase
       .from('project_needs')
-      .select('*, skill:skills(id, name), project:projects(id, name, status)')
+      .select('*, skill:skills(id, name), project:projects(id, name, email, status)')
       .eq('status', 'open')
       .order('urgency')
 
@@ -374,7 +374,37 @@ function renderPionieriList() {
   })
 }
 
+function buildIntroEmail(pioniere, need) {
+  const name = pioniere.full_name || ''
+  const firstName = name.split(' ')[0] || name
+  const projectName = need.project?.name || ''
+  const skillName = need.skill?.name || ''
+  const hours = need.hours_needed ? `${need.hours_needed} ore` : ''
+  const desc = need.description || ''
+
+  const lines = [
+    `Caro/a ${firstName},`,
+    '',
+    `ti scrivo dalla Fondazione Marea per proporti un'opportunità di collaborazione con il progetto "${projectName}".`,
+    '',
+    `Stiamo cercando qualcuno con competenze in ${skillName}${desc ? ` per: ${desc}` : '.'}`,
+    hours ? `L'impegno stimato è di circa ${hours}.` : '',
+    '',
+    'Saresti disponibile a contribuire? Rispondi a questa email per farci sapere e ti metteremo in contatto con il team di progetto.',
+    '',
+    'Grazie per il tuo supporto alla comunità!',
+    '',
+    'Un caro saluto,',
+    'Fondazione Marea',
+  ]
+  return lines.filter((l, i, arr) => !(l === '' && arr[i - 1] === '')).join('\n')
+}
+
 function openCreateMatchModal(pioniere, need) {
+  const pioniereEmail = pioniere.email || ''
+  const projectEmail = need.project?.email || ''
+  const emailTemplate = buildIntroEmail(pioniere, need)
+
   const content = `
     <div class="space-y-5">
       <div class="grid grid-cols-2 gap-4">
@@ -382,14 +412,50 @@ function openCreateMatchModal(pioniere, need) {
           <p class="text-xs text-marea-gray mb-1.5 uppercase tracking-wide">Pioniere</p>
           <p class="font-semibold text-sm text-marea-black">${escapeHtml(pioniere.full_name)}</p>
           <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(pioniere.location) || ''}</p>
+          ${pioniereEmail ? `<p class="text-xs text-marea-teal mt-1 truncate">${escapeHtml(pioniereEmail)}</p>` : ''}
         </div>
         <div class="p-4 rounded-xl bg-amber-50/50 border border-amber-200/30">
           <p class="text-xs text-marea-gray mb-1.5 uppercase tracking-wide">Esigenza</p>
           <p class="font-semibold text-sm text-marea-black">${escapeHtml(need.project?.name) || ''}</p>
           <p class="text-xs text-marea-gray mt-0.5">${escapeHtml(need.skill?.name) || ''}${need.hours_needed ? ' · ' + need.hours_needed + ' ore' : ''}</p>
           ${need.description ? `<p class="text-xs text-marea-gray mt-2 leading-relaxed line-clamp-3">${escapeHtml(need.description)}</p>` : ''}
+          ${projectEmail ? `<p class="text-xs text-marea-teal mt-1 truncate">${escapeHtml(projectEmail)}</p>` : ''}
         </div>
       </div>
+
+      <details class="group rounded-xl border border-marea-border/60 bg-marea-cream/50">
+        <summary class="flex items-center gap-2 px-4 py-3 cursor-pointer text-xs text-marea-gray font-medium uppercase tracking-wide select-none list-none">
+          <svg class="w-4 h-4 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          Bozza email di introduzione
+        </summary>
+        <div class="px-4 pb-4 space-y-3">
+          ${pioniereEmail || projectEmail ? `
+            <div class="flex flex-wrap gap-2">
+              ${pioniereEmail ? `
+                <button type="button" class="copy-addr-btn inline-flex items-center gap-1 text-xs bg-white border border-marea-border rounded-lg px-2.5 py-1 text-marea-black hover:bg-marea-teal-light/50 transition-colors" data-email="${escapeAttr(pioniereEmail)}">
+                  <span>A: ${escapeHtml(pioniereEmail)}</span>
+                  <svg class="w-3 h-3 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </button>
+              ` : ''}
+              ${projectEmail ? `
+                <button type="button" class="copy-addr-btn inline-flex items-center gap-1 text-xs bg-white border border-marea-border rounded-lg px-2.5 py-1 text-marea-black hover:bg-amber-50 transition-colors" data-email="${escapeAttr(projectEmail)}">
+                  <span>CC: ${escapeHtml(projectEmail)}</span>
+                  <svg class="w-3 h-3 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </button>
+              ` : ''}
+            </div>
+          ` : ''}
+          <div class="relative">
+            <textarea id="email-template" rows="6" readonly
+                      class="w-full px-4 py-3 rounded-xl border border-marea-border bg-white text-sm text-marea-black/80 leading-relaxed focus-ring transition-all resize-none overflow-y-auto max-h-40">${escapeHtml(emailTemplate)}</textarea>
+            <button type="button" id="copy-email-btn" class="absolute top-2 right-2 inline-flex items-center gap-1 text-xs text-marea-gray hover:text-marea-black bg-white/80 rounded-lg px-2 py-1 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <span id="copy-email-label">Copia</span>
+            </button>
+          </div>
+        </div>
+      </details>
+
       <form id="create-match-form">
         <div>
           <label class="block text-sm font-medium text-marea-black mb-1.5">Note</label>
@@ -405,7 +471,30 @@ function openCreateMatchModal(pioniere, need) {
     </div>
   `
 
-  showModal(renderModal({ title: 'Nuovo abbinamento', content }))
+  showModal(renderModal({ title: 'Nuovo abbinamento', content, size: 'xl' }))
+
+  // Copy full email body
+  document.getElementById('copy-email-btn')?.addEventListener('click', async () => {
+    const text = document.getElementById('email-template')?.value || ''
+    try {
+      await navigator.clipboard.writeText(text)
+      const label = document.getElementById('copy-email-label')
+      if (label) { label.textContent = 'Copiato!'; setTimeout(() => { label.textContent = 'Copia email' }, 2000) }
+    } catch { /* ignore */ }
+  })
+
+  // Copy individual email addresses
+  document.querySelectorAll('.copy-addr-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.email)
+        const span = btn.querySelector('span')
+        const original = span.textContent
+        span.textContent = 'Copiato!'
+        setTimeout(() => { span.textContent = original }, 2000)
+      } catch { /* ignore */ }
+    })
+  })
 
   document.querySelector('#create-match-form .cancel-modal-btn')?.addEventListener('click', () => closeModal())
 
