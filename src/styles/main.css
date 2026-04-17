@@ -1550,17 +1550,29 @@ select.focus-ring {
     gap: 1.5rem;
   }
 
+  /* Center the globe on mobile — the desktop layout right-aligns and shifts
+     it 15% to the right to sit beside hero copy that stacks above on phones. */
+  .showcase-globe-container {
+    width: 100%;
+    justify-content: center;
+  }
   #showcase-globe {
-    max-width: 320px;
+    display: block;
+    width: min(100%, 320px);
+    max-width: none;
+    margin: 0 auto;
+    transform: none;
+    cursor: default !important;
+    touch-action: pan-y;
+  }
+  .showcase-globe-glow {
+    inset: 10% 0 auto;
+    margin: 0 auto;
   }
 
   /* Globe is decorative on touch — drag is disabled in JS, so hide the hint. */
   .showcase-globe-hint {
     display: none;
-  }
-  #showcase-globe {
-    cursor: default !important;
-    touch-action: pan-y;
   }
 
   .showcase-section-title {
