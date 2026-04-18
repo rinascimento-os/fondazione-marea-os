@@ -601,8 +601,8 @@ export function renderShowcase() {
 
             <div class="showcase-stat-card showcase-stat-delay-4">
               <div class="showcase-stat-value" id="stat-projects">0</div>
-              <div class="showcase-stat-label">Progetti</div>
-              <div class="showcase-stat-sub" id="stat-projects-sub">attivi</div>
+              <div class="showcase-stat-label">Progetti attivi</div>
+              <div class="showcase-stat-sub" id="stat-projects-sub">&nbsp;</div>
             </div>
           </div>
         </section>
