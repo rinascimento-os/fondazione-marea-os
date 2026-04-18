@@ -1112,41 +1112,46 @@ function initSkillBubbles(data) {
     'rgba(180, 175, 110, 0.35)',
   ]
 
-  function sizeBubbles(items, containerW, containerH, minR) {
-    const containerArea = containerW * containerH
+  // Sizes bubbles with a floor (minR) honored — canvas is expanded to fit
+  // instead of shrinking bubbles. Radii scale with count^0.6 to flatten the
+  // long tail so tiny categories still read clearly.
+  function sizeBubblesForText(items, viewportW, viewportH, minR) {
     const maxCount = items[0]?.value || 1
-    const n = items.length
-    const rawAreas = items.map(it => Math.pow(it.value / maxCount, 0.6))
-    const totalRaw = rawAreas.reduce((s, a) => s + a, 0)
-    // Cap minR so it can't exceed available room (32px floor on a 320px
-    // container forced every bubble to minR and the packer overlapped).
-    const sizeBased = Math.min(containerW, containerH) / 7
-    const countBased = Math.sqrt(containerArea / (n * 6))
-    const minCeiling = Math.min(sizeBased, countBased)
-    const effectiveMinR = Math.min(minR, minCeiling)
-    // Cap maxR so two same-size top bubbles can sit beside each other.
-    // Otherwise the packer can stack same-rank bubbles at the center.
-    const maxR = Math.min(containerW, containerH) / 4.5
-    const fillRatio = n > 12 ? 0.32 : n > 8 ? 0.36 : 0.4
-    const targetArea = containerArea * fillRatio
-    return rawAreas.map(raw => {
-      const area = (raw / totalRaw) * targetArea
-      const r = Math.sqrt(area / Math.PI)
-      return Math.max(effectiveMinR, Math.min(maxR, r))
-    })
+    const weights = items.map(it => Math.pow(it.value / maxCount, 0.6))
+    const maxWeight = weights[0] || 1
+    const maxR = Math.min(viewportH / 2.4, viewportW / 2.4, minR * 3)
+    return weights.map(w => minR + (maxR - minR) * (w / maxWeight))
+  }
+
+  // Picks a canvas width that fits bubbles at ~38% density so they breathe.
+  // Height stays locked to the viewport — the panel scrolls horizontally when
+  // bubbles need more room.
+  function computeCanvasWidth(radii, viewportW, viewportH) {
+    const totalArea = radii.reduce((s, r) => s + Math.PI * r * r, 0)
+    const fillRatio = 0.38
+    const needed = Math.ceil((totalArea / fillRatio) / viewportH)
+    return Math.max(viewportW, needed)
   }
 
   function renderCategories() {
-    const containerW = container.offsetWidth
-    const containerH = container.offsetHeight
-    if (!containerW || !containerH) return
+    const containerW = container.clientWidth
+    const viewportH = container.clientHeight
+    if (!containerW || !viewportH) return
 
     container.innerHTML = ''
+    container.scrollTop = 0
     if (backBtn) backBtn.style.display = 'none'
+
+    const inner = document.createElement('div')
+    inner.className = 'showcase-skills-bubbles-inner'
+    container.appendChild(inner)
 
     const sorted = Object.entries(data.skillCategoryCounts).sort((a, b) => b[1] - a[1])
     const items = sorted.map(([cat, count]) => ({ cat, value: count }))
-    const radii = sizeBubbles(items, containerW, containerH, 32)
+    const minR = containerW < 520 ? 48 : 58
+    const radii = sizeBubblesForText(items, containerW, viewportH, minR)
+    const canvasW = computeCanvasWidth(radii, containerW, viewportH)
+    inner.style.width = canvasW + 'px'
 
     const bubbles = sorted.map(([cat, count], i) => ({
       cat, count,
@@ -1154,7 +1159,7 @@ function initSkillBubbles(data) {
       color: COLORS[i % COLORS.length],
     }))
 
-    const placed = packBubbles(bubbles, containerW, containerH)
+    const placed = packBubbles(bubbles, canvasW, viewportH)
 
     placed.forEach((b, i) => {
       const el = document.createElement('div')
@@ -1172,27 +1177,35 @@ function initSkillBubbles(data) {
         <span class="showcase-bubble-count">${b.count}</span>
       </div>`
       el.addEventListener('click', () => renderSkillsInCategory(b.cat, b.color))
-      container.appendChild(el)
+      inner.appendChild(el)
     })
+
+    container.scrollLeft = Math.max(0, (canvasW - containerW) / 2)
   }
 
   function renderSkillsInCategory(category, parentColor) {
     const all = data.skillsByCategory[category]
     if (!all || all.length === 0) return
 
-    const containerW = container.offsetWidth
-    const containerH = container.offsetHeight
+    const containerW = container.clientWidth
+    const viewportH = container.clientHeight
     container.innerHTML = ''
+    container.scrollTop = 0
     if (backBtn) backBtn.style.display = ''
 
-    // Cap to top N — beyond ~16 the bubbles are too small to read and the
-    // packer struggles to fit them.
-    const cap = containerW < 520 ? 12 : 18
+    const inner = document.createElement('div')
+    inner.className = 'showcase-skills-bubbles-inner'
+    container.appendChild(inner)
+
+    // Cap to top N — beyond ~24 the bubbles get too small even when we scroll.
+    const cap = containerW < 520 ? 18 : 24
     const skills = all.slice(0, cap)
 
     const items = skills.map(s => ({ cat: s.name, value: s.count }))
-    const minR = containerW < 520 ? 22 : 28
-    const radii = sizeBubbles(items, containerW, containerH, minR)
+    const minR = containerW < 520 ? 40 : 48
+    const radii = sizeBubblesForText(items, containerW, viewportH, minR)
+    const canvasW = computeCanvasWidth(radii, containerW, viewportH)
+    inner.style.width = canvasW + 'px'
 
     const bubbles = skills.map((skill, i) => ({
       cat: skill.name, count: skill.count,
@@ -1200,7 +1213,7 @@ function initSkillBubbles(data) {
       color: parentColor.replace('0.5', '0.45').replace('0.4', '0.38'),
     }))
 
-    const placed = packBubbles(bubbles, containerW, containerH)
+    const placed = packBubbles(bubbles, canvasW, viewportH)
 
     placed.forEach((b, i) => {
       const el = document.createElement('div')
@@ -1215,8 +1228,10 @@ function initSkillBubbles(data) {
         ${b.cat}
         <span class="showcase-bubble-count">${b.count}</span>
       </div>`
-      container.appendChild(el)
+      inner.appendChild(el)
     })
+
+    container.scrollLeft = Math.max(0, (canvasW - containerW) / 2)
   }
 
   renderCategories()

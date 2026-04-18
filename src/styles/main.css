@@ -1056,21 +1056,29 @@ select.focus-ring {
 
 .showcase-skills-bubbles {
   position: relative;
-  height: 420px;
-  overflow: hidden;
+  height: 520px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
   border-radius: 1.25rem;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.showcase-skills-bubbles-inner {
+  position: relative;
+  height: 100%;
+}
+
 .showcase-bubble {
   position: absolute;
+  box-sizing: border-box;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 0.5rem;
+  padding: 0.6rem;
   border: 1px solid rgba(255,255,255,0.1);
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
   animation: bubbleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -1098,14 +1106,14 @@ select.focus-ring {
 }
 
 .showcase-bubble-label {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.2;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   pointer-events: none;
-  max-width: 90%;
-  overflow: hidden;
+  max-width: 82%;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1201,18 +1209,23 @@ select.focus-ring {
   }
 
   .showcase-skills-bubbles {
-    height: 480px;
+    height: 560px;
+    scrollbar-width: none;
+  }
+  .showcase-skills-bubbles::-webkit-scrollbar {
+    display: none;
   }
   .showcase-bubble-label {
-    font-size: 0.55rem;
+    font-size: 0.62rem;
     line-height: 1.15;
+    max-width: 84%;
   }
   .showcase-bubble-icon {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
   }
   .showcase-bubble-count {
-    font-size: 1.05em;
+    font-size: 1.1em;
     margin-top: 0.1rem;
   }
   .showcase-bubbles-section {
