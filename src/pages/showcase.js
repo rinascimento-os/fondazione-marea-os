@@ -720,9 +720,20 @@ function initShowcaseDeferredSections(data) {
   showcaseDeferredObservers.forEach(observer => observer.disconnect())
   showcaseDeferredObservers = []
 
+  // On mobile, the observer-triggered reveal feels abrupt (Sicily map and match
+  // flow pop in with no entrance animation). Init eagerly so they're already
+  // rendered by the time the user scrolls down.
+  const isMobile = window.matchMedia('(max-width: 768px)').matches
+
   const observeOnce = (selector, key, init) => {
     const el = document.querySelector(selector)
     if (!el || showcaseDeferredInit[key]) return
+
+    if (isMobile) {
+      showcaseDeferredInit[key] = true
+      init()
+      return
+    }
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
