@@ -8,6 +8,7 @@ import { renderProjects, initProjects } from './pages/projects.js'
 import { renderMatching, initMatching } from './pages/matching.js'
 import { renderTimebank, initTimebank } from './pages/timebank.js'
 import { renderSkills, initSkills } from './pages/skills.js'
+import { renderShowcase, initShowcase, destroyShowcase } from './pages/showcase.js'
 
 const app = document.getElementById('app')
 
@@ -18,6 +19,7 @@ const routes = {
   '#/progetti': { render: renderProjects, init: initProjects },
   '#/matching': { render: renderMatching, init: initMatching },
   '#/timebank': { render: renderTimebank, init: initTimebank },
+  '#/vetrina': { render: renderShowcase, init: initShowcase, fullscreen: true },
 }
 
 let currentSession = null
@@ -48,6 +50,13 @@ async function router() {
 
   if (!route) {
     window.location.hash = '#/dashboard'
+    return
+  }
+
+  // Fullscreen pages render without the sidebar layout
+  if (route.fullscreen) {
+    app.innerHTML = route.render()
+    if (route.init) await route.init()
     return
   }
 
