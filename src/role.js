@@ -45,7 +45,14 @@ export async function resolveRole(session) {
 function makeRole({ kind, email = null, pioniereId = null }) {
   const isAdmin = kind === 'admin' || kind === 'dual'
   const isPioniere = kind === 'pioniere' || kind === 'dual'
-  const stored = sessionStorage.getItem(VIEW_MODE_KEY)
+  // One-time migration: lift any pre-existing per-tab choice into localStorage
+  // so the current tab keeps its view mode after the storage move.
+  const legacy = sessionStorage.getItem(VIEW_MODE_KEY)
+  if (legacy && !localStorage.getItem(VIEW_MODE_KEY)) {
+    localStorage.setItem(VIEW_MODE_KEY, legacy)
+    sessionStorage.removeItem(VIEW_MODE_KEY)
+  }
+  const stored = localStorage.getItem(VIEW_MODE_KEY)
   let viewMode = null
   if (kind === 'admin') viewMode = 'admin'
   else if (kind === 'pioniere') viewMode = 'pioniere'
@@ -55,12 +62,12 @@ function makeRole({ kind, email = null, pioniereId = null }) {
 
 export function setViewMode(mode) {
   if (mode !== 'admin' && mode !== 'pioniere') return
-  sessionStorage.setItem(VIEW_MODE_KEY, mode)
+  localStorage.setItem(VIEW_MODE_KEY, mode)
   if (currentRole) currentRole.viewMode = mode
 }
 
 export function clearViewMode() {
-  sessionStorage.removeItem(VIEW_MODE_KEY)
+  localStorage.removeItem(VIEW_MODE_KEY)
   if (currentRole) currentRole.viewMode = currentRole.kind === 'dual' ? null : currentRole.viewMode
 }
 

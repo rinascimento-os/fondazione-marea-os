@@ -1,5 +1,6 @@
 import './styles/main.css'
-import { getSession, onAuthStateChange } from './auth.js'
+import { supabase } from './supabase.js'
+import { onAuthStateChange } from './auth.js'
 import { renderLayout, initLayoutListeners } from './components/layout.js'
 import { renderLogin, initLogin } from './pages/login.js'
 import { renderDashboard, initDashboard } from './pages/dashboard.js'
@@ -14,6 +15,41 @@ import { renderViewSelect, initViewSelect } from './pages/view-select.js'
 import { resolveRole, getRole, clearViewMode, canVisit, defaultRouteFor } from './role.js'
 
 const app = document.getElementById('app')
+
+function renderBootLoader() {
+  return `
+    <div class="min-h-screen flex items-center justify-center bg-marea-cream">
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-8 h-8 border-2 border-marea-teal/30 border-t-marea-teal rounded-full animate-spin"></div>
+      </div>
+    </div>
+  `
+}
+
+// Resolve the initial auth state reliably, even in fresh tabs (e.g. when a
+// hash-routed link is opened with target="_blank"). supabase.auth.getSession()
+// can return null before the client has finished hydrating from localStorage;
+// listening for the INITIAL_SESSION event is the authoritative signal.
+function getInitialSession({ timeoutMs = 4000 } = {}) {
+  return new Promise((resolve) => {
+    let done = false
+    const finish = (session) => {
+      if (done) return
+      done = true
+      sub?.unsubscribe()
+      clearTimeout(timer)
+      resolve(session ?? null)
+    }
+    const { data: { subscription: sub } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') finish(session)
+    })
+    // Fast path: if supabase already has a hydrated session, resolve early.
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session) finish(data.session)
+    }).catch(() => {})
+    const timer = setTimeout(() => finish(null), timeoutMs)
+  })
+}
 
 const routes = {
   '#/dashboard': { render: renderDashboard, init: initDashboard, adminOnly: true },
@@ -105,6 +141,10 @@ function renderUnauthorized() {
 }
 
 async function init() {
+  // Show a boot loader immediately so the user never sees a blank page
+  // (and so a redirect to #/login can't flash before auth is resolved).
+  app.innerHTML = renderBootLoader()
+
   // Supabase puts auth tokens in the URL hash (e.g. #access_token=...&type=invite)
   // Detect and handle these before routing
   const hash = window.location.hash
@@ -133,10 +173,20 @@ async function init() {
     }
   }
 
-  currentSession = await getSession()
+  // Wait for supabase to definitively know the initial session — this prevents
+  // fresh tabs (target="_blank" deep links) from racing the router and being
+  // bounced to #/login before the persisted session is read from storage.
+  currentSession = await getInitialSession()
   await resolveRole(currentSession)
 
-  onAuthStateChange(async (session) => {
+  onAuthStateChange(async (session, event) => {
+    // Token refresh fires periodically (and on tab focus). The user hasn't
+    // changed — keep the cached session current but don't re-render the app,
+    // which would otherwise flash the boot loader / refetch every page.
+    if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+      currentSession = session
+      return
+    }
     const wasSignedIn = !!currentSession
     currentSession = session
     if (!session) {

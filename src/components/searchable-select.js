@@ -18,8 +18,12 @@ export function renderSearchableSelect({ id, placeholder = 'Cerca...' }) {
     <div id="${id}-container" class="relative">
       <div class="relative">
         <input type="text" id="${id}-input"
-               class="w-full px-4 py-2.5 pr-8 rounded-xl border border-marea-border text-sm focus-ring transition-all"
+               class="w-full px-4 py-2.5 pr-9 rounded-xl border border-marea-border bg-white text-sm placeholder:text-marea-gray focus-ring transition-all cursor-pointer"
                placeholder="${placeholder}" autocomplete="off" />
+        <span id="${id}-chevron"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-marea-gray/70 pointer-events-none transition-transform">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </span>
         <button type="button" id="${id}-clear"
                 class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-marea-gray/60 hover:text-marea-gray transition-colors hidden">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -38,6 +42,7 @@ export function initSearchableSelect({ id, options = [], onSelect, onClear }) {
   const dropdown = document.getElementById(`${id}-dropdown`)
   const hiddenInput = document.getElementById(`${id}-value`)
   const clearBtn = document.getElementById(`${id}-clear`)
+  const chevron = document.getElementById(`${id}-chevron`)
   if (!input || !dropdown) return null
 
   let allOptions = options  // [{ id, label, sublabel? }]
@@ -55,11 +60,13 @@ export function initSearchableSelect({ id, options = [], onSelect, onClear }) {
     isOpen = true
     highlightIdx = -1
     render(input.value)
+    chevron?.classList.add('rotate-180')
   }
 
   function hide() {
     isOpen = false
     dropdown.classList.add('hidden')
+    chevron?.classList.remove('rotate-180')
   }
 
   function render(filter = '') {
@@ -109,6 +116,7 @@ export function initSearchableSelect({ id, options = [], onSelect, onClear }) {
     input.value = opt.label
     hiddenInput.value = opt.id
     clearBtn.classList.remove('hidden')
+    chevron?.classList.add('hidden')
     input.classList.add('text-marea-black', 'font-medium')
     hide()
     if (onSelect) onSelect(opt)
@@ -119,6 +127,7 @@ export function initSearchableSelect({ id, options = [], onSelect, onClear }) {
     input.value = ''
     hiddenInput.value = ''
     clearBtn.classList.add('hidden')
+    chevron?.classList.remove('hidden')
     input.classList.remove('text-marea-black', 'font-medium')
     if (onClear) onClear()
   }
@@ -140,6 +149,7 @@ export function initSearchableSelect({ id, options = [], onSelect, onClear }) {
       selectedOption = null
       hiddenInput.value = ''
       clearBtn.classList.add('hidden')
+      chevron?.classList.remove('hidden')
       input.classList.remove('text-marea-black', 'font-medium')
     }
     show()

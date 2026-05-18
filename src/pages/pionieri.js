@@ -41,15 +41,17 @@ function matchExplanation(p, anchor) {
 }
 
 function applyFilters(list) {
+  const tokens = filters.search.toLowerCase().split(/\s+/).filter(Boolean)
   return list.filter(p => {
-    if (filters.search.trim()) {
-      const q = filters.search.toLowerCase()
-      const hit = p.full_name?.toLowerCase().includes(q)
-        || p.company?.toLowerCase().includes(q)
-        || p.location?.toLowerCase().includes(q)
-        || (isAdminView() && p.email?.toLowerCase().includes(q))
-        || p.pioniere_skills?.some(ps => ps.skill?.name?.toLowerCase().includes(q))
-      if (!hit) return false
+    if (tokens.length > 0) {
+      const haystack = [
+        p.full_name,
+        p.company,
+        p.location,
+        isAdminView() ? p.email : null,
+        ...(p.pioniere_skills?.map(ps => ps.skill?.name) || []),
+      ].filter(Boolean).join(' ').toLowerCase()
+      if (!tokens.every(t => haystack.includes(t))) return false
     }
     if (filters.skillIds.length > 0) {
       const ps = new Set((p.pioniere_skills || []).map(s => s.skill_id))
@@ -110,11 +112,6 @@ export function renderPionieri() {
     <div>
       ${adminControls ? `<div class="flex justify-end mb-6">${adminControls}</div>` : ''}
 
-      <div id="pionieri-match-section" class="hidden mb-10">
-        <h2 class="font-heading text-xl text-marea-black mb-3">Pionieri affini a te</h2>
-        <div id="pionieri-match-list" class="columns-1 lg:columns-2 gap-4 space-y-4"></div>
-      </div>
-
       <div>
         <div class="flex items-baseline gap-3 mb-3 flex-wrap">
           <h2 class="font-heading text-xl text-marea-black">Tutti i Pionieri (A-Z)</h2>
@@ -133,6 +130,12 @@ export function renderPionieri() {
           </div>
           <div id="filter-skill-tags" class="flex flex-wrap gap-1.5 mt-2"></div>
         </div>
+
+        <div id="pionieri-match-section" class="hidden mb-10">
+          <h2 class="font-heading text-xl text-marea-black mb-3">Pionieri affini a te</h2>
+          <div id="pionieri-match-list" class="columns-1 lg:columns-2 gap-4 space-y-4"></div>
+        </div>
+
         <div id="pionieri-list" class="columns-1 lg:columns-2 gap-4 space-y-4">
           <p class="text-sm text-marea-gray col-span-full">Caricamento...</p>
         </div>

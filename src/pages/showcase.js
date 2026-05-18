@@ -5,7 +5,6 @@ import 'leaflet/dist/leaflet.css'
 import { supabase } from '../supabase.js'
 import sicilyProvincesGeoJson from '../assets/sicilia-provinces.json'
 import worldCountriesGeoJson from '../assets/world-countries.json'
-import { getRole } from '../role.js'
 
 // ── Geocoding dictionary ───────────────────────────────────────────
 // Maps lowercase location substrings → [lat, lng]
@@ -542,12 +541,6 @@ export function renderShowcase() {
         <div class="showcase-title-group">
           <img src="/brand_assets/logo/Fondazione_Marea_Logo_H_W.svg" alt="Fondazione Marea" class="showcase-logo" />
         </div>
-        ${(() => {
-          const isPioniereView = getRole()?.viewMode === 'pioniere'
-          const backHref = isPioniereView ? '#/pionieri' : '#/dashboard'
-          const backLabel = isPioniereView ? 'Pionieri' : 'Dashboard'
-          return `<a href="${backHref}" class="showcase-back-btn"><span>${backLabel}</span></a>`
-        })()}
       </header>
 
       <!-- Loading state -->
