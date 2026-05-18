@@ -26,7 +26,7 @@ export function renderSearchableSelect({ id, placeholder = 'Cerca...' }) {
         </button>
       </div>
       <div id="${id}-dropdown"
-           class="absolute left-0 right-0 top-full mt-1 bg-white border border-marea-border/60 rounded-xl shadow-lg max-h-52 overflow-y-auto z-20 hidden">
+           class="absolute left-0 right-0 top-full mt-1 bg-white border border-marea-border/60 rounded-xl shadow-lg max-h-52 overflow-y-auto overflow-x-hidden z-20 hidden">
       </div>
       <input type="hidden" id="${id}-value" value="" />
     </div>

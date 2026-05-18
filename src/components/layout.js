@@ -1,7 +1,8 @@
 import { signOut } from '../auth.js'
 import { renderModal, showModal, closeModal } from './modal.js'
+import { getRole, setViewMode, defaultRouteFor } from '../role.js'
 
-const navItems = [
+const ADMIN_NAV_ITEMS = [
   { hash: '#/dashboard', label: 'Dashboard', icon: dashboardIcon },
   { hash: '#/pionieri', label: 'Pionieri', icon: pioneriIcon },
   { hash: '#/competenze', label: 'Competenze', icon: skillsIcon },
@@ -10,6 +11,16 @@ const navItems = [
   { hash: '#/timebank', label: 'Banca del Tempo', icon: timebankIcon },
   { hash: '#/vetrina', label: 'Impatto Globale', icon: showcaseIcon },
 ]
+
+const PIONIERE_NAV_ITEMS = [
+  { hash: '#/vetrina', label: 'Impatto Globale', icon: showcaseIcon },
+  { hash: '#/pionieri', label: 'Pionieri', icon: pioneriIcon },
+  { hash: '#/profilo', label: 'Il mio profilo', icon: profileIcon },
+]
+
+function profileIcon() {
+  return `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`
+}
 
 function dashboardIcon() {
   return `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>`
@@ -40,7 +51,12 @@ function showcaseIcon() {
 }
 
 export function renderLayout(contentHtml, currentHash) {
+  const role = getRole()
+  const navItems = role?.viewMode === 'pioniere' ? PIONIERE_NAV_ITEMS : ADMIN_NAV_ITEMS
   const activeItem = navItems.find(item => currentHash.startsWith(item.hash)) || navItems[0]
+  const showSwitcher = role?.kind === 'dual'
+  const otherMode = role?.viewMode === 'admin' ? 'pioniere' : 'admin'
+  const otherModeLabel = otherMode === 'admin' ? 'Vista Admin' : 'Vista Pioniere'
 
   return `
     <div class="flex h-screen overflow-hidden">
@@ -71,7 +87,13 @@ export function renderLayout(contentHtml, currentHash) {
         </nav>
 
         <!-- Footer -->
-        <div class="p-3 border-t border-white/10">
+        <div class="p-3 border-t border-white/10 space-y-1">
+          ${showSwitcher ? `
+            <button id="switch-view-btn" data-target-mode="${otherMode}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-white/8 hover:text-white w-full transition-all duration-150">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+              ${otherModeLabel}
+            </button>
+          ` : ''}
           <button id="logout-btn" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-white/8 hover:text-white w-full transition-all duration-150">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Esci
@@ -140,4 +162,13 @@ export function initLayoutListeners() {
 
   document.getElementById('menu-btn')?.addEventListener('click', openSidebar)
   overlay?.addEventListener('click', closeSidebar)
+
+  const switchBtn = document.getElementById('switch-view-btn')
+  if (switchBtn) {
+    switchBtn.addEventListener('click', () => {
+      const target = switchBtn.dataset.targetMode
+      setViewMode(target)
+      window.location.hash = defaultRouteFor(target)
+    })
+  }
 }

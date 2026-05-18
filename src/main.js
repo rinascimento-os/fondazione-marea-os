@@ -8,18 +8,22 @@ import { renderProjects, initProjects } from './pages/projects.js'
 import { renderMatching, initMatching } from './pages/matching.js'
 import { renderTimebank, initTimebank } from './pages/timebank.js'
 import { renderSkills, initSkills } from './pages/skills.js'
-import { renderShowcase, initShowcase, destroyShowcase } from './pages/showcase.js'
+import { renderShowcase, initShowcase } from './pages/showcase.js'
+import { renderProfilo, initProfilo } from './pages/profilo.js'
+import { renderViewSelect, initViewSelect } from './pages/view-select.js'
+import { resolveRole, getRole, clearViewMode, canVisit, defaultRouteFor } from './role.js'
 
 const app = document.getElementById('app')
 
 const routes = {
-  '#/dashboard': { render: renderDashboard, init: initDashboard },
+  '#/dashboard': { render: renderDashboard, init: initDashboard, adminOnly: true },
   '#/pionieri': { render: renderPionieri, init: initPionieri },
-  '#/competenze': { render: renderSkills, init: initSkills },
-  '#/progetti': { render: renderProjects, init: initProjects },
-  '#/matching': { render: renderMatching, init: initMatching },
-  '#/timebank': { render: renderTimebank, init: initTimebank },
+  '#/competenze': { render: renderSkills, init: initSkills, adminOnly: true },
+  '#/progetti': { render: renderProjects, init: initProjects, adminOnly: true },
+  '#/matching': { render: renderMatching, init: initMatching, adminOnly: true },
+  '#/timebank': { render: renderTimebank, init: initTimebank, adminOnly: true },
   '#/vetrina': { render: renderShowcase, init: initShowcase, fullscreen: true },
+  '#/profilo': { render: renderProfilo, init: initProfilo, pioniereOnly: true },
 }
 
 let currentSession = null
@@ -30,7 +34,7 @@ async function router() {
   // Login page — no auth required
   if (hash === '#/login') {
     if (currentSession) {
-      window.location.hash = '#/dashboard'
+      window.location.hash = defaultRouteFor(getRole()?.viewMode)
       return
     }
     app.innerHTML = renderLogin()
@@ -44,12 +48,36 @@ async function router() {
     return
   }
 
+  const role = getRole()
+
+  // No role assigned yet (race during init) — defer
+  if (!role) return
+
+  // User has authenticated but is neither admin nor a known pioniere → kick out
+  if (role.kind === 'none') {
+    app.innerHTML = renderUnauthorized()
+    return
+  }
+
+  // Dual-role user hasn't picked a view yet → show splash
+  if (role.kind === 'dual' && !role.viewMode) {
+    app.innerHTML = renderViewSelect()
+    initViewSelect()
+    return
+  }
+
   // Find route
   const routeKey = Object.keys(routes).find(key => hash.startsWith(key))
-  const route = routeKey ? routes[routeKey] : routes['#/dashboard']
+  const route = routeKey ? routes[routeKey] : null
 
   if (!route) {
-    window.location.hash = '#/dashboard'
+    window.location.hash = defaultRouteFor(role.viewMode)
+    return
+  }
+
+  // Role-based route gating. canVisit() encodes pioniere whitelist.
+  if (!canVisit(routeKey)) {
+    window.location.hash = defaultRouteFor(role.viewMode)
     return
   }
 
@@ -66,6 +94,16 @@ async function router() {
   if (route.init) await route.init()
 }
 
+function renderUnauthorized() {
+  return `
+    <div class="min-h-screen flex flex-col items-center justify-center bg-marea-cream p-4 text-center">
+      <h1 class="font-heading text-3xl text-marea-black mb-3">Accesso non autorizzato</h1>
+      <p class="text-marea-gray mb-6 max-w-md">Il tuo indirizzo email non &egrave; abilitato. Contatta un amministratore della Fondazione.</p>
+      <button id="unauth-logout" class="btn-outline px-5 py-2.5 text-sm rounded-lg">Esci</button>
+    </div>
+  `
+}
+
 async function init() {
   // Supabase puts auth tokens in the URL hash (e.g. #access_token=...&type=invite)
   // Detect and handle these before routing
@@ -77,16 +115,17 @@ async function init() {
 
     if (hashError) {
       window.location.hash = '#/login'
-      // Store the error so the login page can display it
       sessionStorage.setItem('login_error', 'Il link di accesso è scaduto o è già stato utilizzato. Richiedine uno nuovo.')
     } else {
-      // Let Supabase client pick up the tokens from the URL
-      const { data, error } = await import('./supabase.js').then(m =>
+      const { data } = await import('./supabase.js').then(m =>
         m.supabase.auth.getSession()
       )
       if (data?.session) {
         currentSession = data.session
-        window.location.hash = '#/dashboard'
+        // Splash always shows on fresh login for dual-role users
+        clearViewMode()
+        await resolveRole(currentSession)
+        window.location.hash = defaultRouteFor(getRole()?.viewMode)
       } else {
         window.location.hash = '#/login'
         sessionStorage.setItem('login_error', 'Il link di accesso è scaduto o è già stato utilizzato. Richiedine uno nuovo.')
@@ -95,21 +134,40 @@ async function init() {
   }
 
   currentSession = await getSession()
+  await resolveRole(currentSession)
 
-  onAuthStateChange((session) => {
+  onAuthStateChange(async (session) => {
+    const wasSignedIn = !!currentSession
     currentSession = session
-    if (!session && window.location.hash !== '#/login') {
-      window.location.hash = '#/login'
-    } else if (session && (window.location.hash === '#/login' || window.location.hash === '')) {
-      window.location.hash = '#/dashboard'
+    if (!session) {
+      clearViewMode()
+      await resolveRole(null)
+      if (window.location.hash !== '#/login') window.location.hash = '#/login'
+      return
+    }
+    // Fresh sign-in: clear view mode so dual-role users get the splash again
+    if (!wasSignedIn) clearViewMode()
+    await resolveRole(session)
+    if (window.location.hash === '#/login' || window.location.hash === '') {
+      window.location.hash = defaultRouteFor(getRole()?.viewMode)
+    } else {
+      router()
     }
   })
 
   window.addEventListener('hashchange', router)
 
+  // Wire logout from the unauthorized screen
+  document.addEventListener('click', async (e) => {
+    if (e.target?.id === 'unauth-logout') {
+      const { signOut } = await import('./auth.js')
+      await signOut()
+    }
+  })
+
   // Default route
   if (!window.location.hash || window.location.hash === '#') {
-    window.location.hash = currentSession ? '#/dashboard' : '#/login'
+    window.location.hash = currentSession ? defaultRouteFor(getRole()?.viewMode) : '#/login'
   } else {
     router()
   }

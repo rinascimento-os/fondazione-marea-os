@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import { supabase } from '../supabase.js'
 import sicilyProvincesGeoJson from '../assets/sicilia-provinces.json'
 import worldCountriesGeoJson from '../assets/world-countries.json'
+import { getRole } from '../role.js'
 
 // ── Geocoding dictionary ───────────────────────────────────────────
 // Maps lowercase location substrings → [lat, lng]
@@ -355,7 +356,7 @@ async function fetchShowcaseData() {
     { data: pioniereSkills },
     { data: projectNeeds },
   ] = await Promise.all([
-    supabase.from('pionieri').select('id, full_name, location, origin, created_at'),
+    supabase.from('pionieri_public').select('id, full_name, location, origin, created_at'),
     supabase.from('projects').select('id, name, type, status'),
     supabase.from('matches').select('id, status, created_at, pioniere_id, project_need_id'),
     supabase.from('time_entries').select('id, hours, date'),
@@ -541,9 +542,12 @@ export function renderShowcase() {
         <div class="showcase-title-group">
           <img src="/brand_assets/logo/Fondazione_Marea_Logo_H_W.svg" alt="Fondazione Marea" class="showcase-logo" />
         </div>
-        <a href="#/dashboard" class="showcase-back-btn">
-          <span>Dashboard</span>
-        </a>
+        ${(() => {
+          const isPioniereView = getRole()?.viewMode === 'pioniere'
+          const backHref = isPioniereView ? '#/pionieri' : '#/dashboard'
+          const backLabel = isPioniereView ? 'Pionieri' : 'Dashboard'
+          return `<a href="${backHref}" class="showcase-back-btn"><span>${backLabel}</span></a>`
+        })()}
       </header>
 
       <!-- Loading state -->

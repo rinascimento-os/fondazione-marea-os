@@ -29,7 +29,7 @@ export function renderSkillPicker({ selectedSkills = [], inputId = 'skill-picker
   `
 }
 
-export function initSkillPicker({ inputId = 'skill-picker', skills = [], selectedSkills = [], onAdd, onRemove }) {
+export function initSkillPicker({ inputId = 'skill-picker', skills = [], selectedSkills = [], allowCreate = true, onAdd, onRemove }) {
   const input = document.getElementById(`${inputId}-input`)
   const dropdown = document.getElementById(`${inputId}-dropdown`)
   const tagsContainer = document.getElementById(`${inputId}-tags`)
@@ -43,7 +43,7 @@ export function initSkillPicker({ inputId = 'skill-picker', skills = [], selecte
       s.name.toLowerCase().includes(filter.toLowerCase())
     )
 
-    if (available.length === 0 && filter.trim()) {
+    if (available.length === 0 && filter.trim() && allowCreate) {
       dropdown.innerHTML = `
         <button type="button" class="w-full text-left px-3 py-2 text-sm text-marea-teal hover:bg-marea-light skill-create">
           + Crea "${escapeHtml(filter.trim())}"

@@ -2,45 +2,149 @@ import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/skill-picker.js'
+import { renderSearchableSelect, initSearchableSelect } from '../components/searchable-select.js'
 import { openCsvImport } from '../components/csv-import.js'
 import { initDeleteConfirm, showAlert } from '../utils/confirm-delete.js'
 import { escapeAttr, getInitials, withSubmitLock } from '../utils/helpers.js'
+import { getRole } from '../role.js'
+import { renderAvailabilitySelect } from '../utils/availability.js'
+import { safeUrl } from '../utils/url.js'
+import { createIcons, Search, X } from 'lucide'
 
 let allPionieri = []
 let allSkills = []
+let currentPioniere = null
+let filters = { search: '', skillIds: [], residenza: '', origine: '' }
+
+function isAdminView() {
+  return getRole()?.viewMode === 'admin'
+}
+
+function computeMatchScore(p, anchor) {
+  if (!anchor || !p || p.id === anchor.id) return 0
+  const anchorSkillIds = new Set((anchor.pioniere_skills || []).map(ps => ps.skill_id))
+  const overlap = (p.pioniere_skills || []).filter(ps => anchorSkillIds.has(ps.skill_id)).length
+  let score = overlap * 2
+  if (p.location && anchor.location && p.location.trim().toLowerCase() === anchor.location.trim().toLowerCase()) score += 5
+  if (p.origin && anchor.origin && p.origin.trim().toLowerCase() === anchor.origin.trim().toLowerCase()) score += 1
+  return score
+}
+
+function matchExplanation(p, anchor) {
+  const parts = []
+  const anchorSkillIds = new Set((anchor?.pioniere_skills || []).map(ps => ps.skill_id))
+  const overlap = (p.pioniere_skills || []).filter(ps => anchorSkillIds.has(ps.skill_id)).length
+  if (overlap > 0) parts.push(`${overlap} ${overlap === 1 ? 'competenza' : 'competenze'} in comune`)
+  if (p.location && anchor?.location && p.location.trim().toLowerCase() === anchor.location.trim().toLowerCase()) parts.push('stessa residenza')
+  if (p.origin && anchor?.origin && p.origin.trim().toLowerCase() === anchor.origin.trim().toLowerCase()) parts.push('stessa origine')
+  return parts.join(' · ')
+}
+
+function applyFilters(list) {
+  return list.filter(p => {
+    if (filters.search.trim()) {
+      const q = filters.search.toLowerCase()
+      const hit = p.full_name?.toLowerCase().includes(q)
+        || p.company?.toLowerCase().includes(q)
+        || p.location?.toLowerCase().includes(q)
+        || (isAdminView() && p.email?.toLowerCase().includes(q))
+        || p.pioniere_skills?.some(ps => ps.skill?.name?.toLowerCase().includes(q))
+      if (!hit) return false
+    }
+    if (filters.skillIds.length > 0) {
+      const ps = new Set((p.pioniere_skills || []).map(s => s.skill_id))
+      if (!filters.skillIds.every(id => ps.has(id))) return false
+    }
+    if (filters.residenza && p.location !== filters.residenza) return false
+    if (filters.origine && p.origin !== filters.origine) return false
+    return true
+  })
+}
+
+function uniqueValues(field) {
+  const set = new Set()
+  allPionieri.forEach(p => {
+    const v = p[field]?.trim()
+    if (v) set.add(v)
+  })
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'it'))
+}
+
+// Best-effort: ask the server to create an auth.users row for this pioniere
+// so they can sign in via magic link. Idempotent and non-fatal — if it fails,
+// the admin can still save the pioniere row; only login is blocked.
+async function provisionAuthForPioniere(email) {
+  if (!email) return
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) return
+    await fetch('/.netlify/functions/provision-pioniere-auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ email }),
+    })
+  } catch (err) {
+    console.warn('Auth provisioning failed (non-fatal):', err)
+  }
+}
 
 export function renderPionieri() {
+  const adminControls = isAdminView() ? `
+    <div class="flex gap-2">
+      <button id="import-csv-btn" class="btn-outline">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        Importa CSV
+      </button>
+      <button id="add-pioniere-btn" class="btn-gold">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Aggiungi Pioniere
+      </button>
+    </div>
+  ` : ''
+
   return `
     <div>
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div class="flex items-center gap-3 flex-1 max-w-md">
-          <span id="pionieri-count" class="text-sm font-semibold text-marea-navy bg-marea-navy/10 px-3 py-1.5 rounded-full whitespace-nowrap"><svg class="w-4 h-4 animate-spin text-marea-navy/40" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></span>
-          <div class="relative flex-1">
-          <input type="text" id="pionieri-search" placeholder="Cerca per nome, luogo o competenza..."
-                 class="w-full pl-10 pr-4 py-3 rounded-xl border border-marea-border bg-white text-sm focus-ring transition-all" />
-          <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button id="import-csv-btn" class="btn-outline">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-            Importa CSV
-          </button>
-          <button id="add-pioniere-btn" class="btn-gold">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Aggiungi Pioniere
-          </button>
-        </div>
+      ${adminControls ? `<div class="flex justify-end mb-6">${adminControls}</div>` : ''}
+
+      <div id="pionieri-match-section" class="hidden mb-10">
+        <h2 class="font-heading text-xl text-marea-black mb-3">Pionieri affini a te</h2>
+        <div id="pionieri-match-list" class="columns-1 lg:columns-2 gap-4 space-y-4"></div>
       </div>
 
-      <div id="pionieri-list" class="columns-1 lg:columns-2 gap-4 space-y-4">
-        <p class="text-sm text-marea-gray col-span-full">Caricamento...</p>
+      <div>
+        <div class="flex items-baseline gap-3 mb-3 flex-wrap">
+          <h2 class="font-heading text-xl text-marea-black">Tutti i Pionieri (A-Z)</h2>
+          <span id="pionieri-count" class="text-xs font-semibold text-marea-navy bg-marea-navy/10 px-2.5 py-1 rounded-full whitespace-nowrap"><svg class="w-3 h-3 inline animate-spin text-marea-navy/40" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></span>
+        </div>
+        <div id="pionieri-filters" class="mb-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="relative shrink-0">
+              <input type="text" id="pionieri-search" placeholder="Cerca..."
+                     class="w-40 pl-8 pr-3 py-2 rounded-lg border border-marea-border bg-white text-sm focus-ring" />
+              <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-marea-gray pointer-events-none"></i>
+            </div>
+            <div class="shrink-0 w-40">${renderSearchableSelect({ id: 'filter-skill', placeholder: 'Competenza' })}</div>
+            <div class="shrink-0 w-40">${renderSearchableSelect({ id: 'filter-residenza', placeholder: 'Residenza' })}</div>
+            <div class="shrink-0 w-40">${renderSearchableSelect({ id: 'filter-origine', placeholder: 'Origine' })}</div>
+          </div>
+          <div id="filter-skill-tags" class="flex flex-wrap gap-1.5 mt-2"></div>
+        </div>
+        <div id="pionieri-list" class="columns-1 lg:columns-2 gap-4 space-y-4">
+          <p class="text-sm text-marea-gray col-span-full">Caricamento...</p>
+        </div>
       </div>
     </div>
   `
 }
 
 export async function initPionieri() {
+  filters = { search: '', skillIds: [], residenza: '', origine: '' }
+  createIcons({ icons: { Search, X } })
+
   try {
     allSkills = await loadSkills()
   } catch {
@@ -49,67 +153,147 @@ export async function initPionieri() {
 
   await loadPionieri()
 
-  document.getElementById('add-pioniere-btn')?.addEventListener('click', () => openPioniereForm())
-  document.getElementById('import-csv-btn')?.addEventListener('click', () => {
-    openCsvImport({
-      skills: allSkills,
-      existingPionieri: allPionieri,
-      onComplete: () => loadPionieri(),
-    })
-  })
-  document.getElementById('pionieri-search')?.addEventListener('input', (e) => renderList(e.target.value))
+  // Resolve the logged-in pioniere's row (anchor for match scoring).
+  const role = getRole()
+  currentPioniere = role?.pioniereId
+    ? allPionieri.find(p => p.id === role.pioniereId) || null
+    : null
 
-  if (window.location.hash.includes('new=1')) {
+  initSearchableFilters()
+
+  if (isAdminView()) {
+    document.getElementById('add-pioniere-btn')?.addEventListener('click', () => openPioniereForm())
+    document.getElementById('import-csv-btn')?.addEventListener('click', () => {
+      openCsvImport({
+        skills: allSkills,
+        existingPionieri: allPionieri,
+        onComplete: () => loadPionieri(),
+      })
+    })
+  }
+
+  document.getElementById('pionieri-search')?.addEventListener('input', (e) => {
+    filters.search = e.target.value
+    renderLists()
+  })
+  if (isAdminView() && window.location.hash.includes('new=1')) {
     openPioniereForm()
   }
 }
 
+function initSearchableFilters() {
+  // Skill filter: each pick is added as a chip; the combobox clears so the
+  // user can keep picking. Selected skills hide from the option list.
+  const usedSkillIds = new Set(allPionieri.flatMap(p => (p.pioniere_skills || []).map(ps => ps.skill_id)))
+  const skillOptions = allSkills
+    .filter(s => usedSkillIds.has(s.id))
+    .filter(s => !filters.skillIds.includes(s.id))
+    .map(s => ({ id: s.id, label: s.name, sublabel: s.category }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'it'))
+
+  const skillCtrl = initSearchableSelect({
+    id: 'filter-skill',
+    options: skillOptions,
+    onSelect: (opt) => {
+      if (!filters.skillIds.includes(opt.id)) filters.skillIds.push(opt.id)
+      skillCtrl.clear()
+      // Refresh options to drop the now-selected skill
+      const remaining = allSkills
+        .filter(s => usedSkillIds.has(s.id))
+        .filter(s => !filters.skillIds.includes(s.id))
+        .map(s => ({ id: s.id, label: s.name, sublabel: s.category }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'it'))
+      skillCtrl.setOptions(remaining)
+      renderSkillFilterTags()
+      updateFilterChrome()
+      renderLists()
+    },
+  })
+
+  const residenzaOptions = uniqueValues('location').map(v => ({ id: v, label: v }))
+  initSearchableSelect({
+    id: 'filter-residenza',
+    options: residenzaOptions,
+    onSelect: (opt) => {
+      filters.residenza = opt.id
+      updateFilterChrome()
+      renderLists()
+    },
+    onClear: () => {
+      filters.residenza = ''
+      updateFilterChrome()
+      renderLists()
+    },
+  })
+
+  const origineOptions = uniqueValues('origin').map(v => ({ id: v, label: v }))
+  initSearchableSelect({
+    id: 'filter-origine',
+    options: origineOptions,
+    onSelect: (opt) => {
+      filters.origine = opt.id
+      updateFilterChrome()
+      renderLists()
+    },
+    onClear: () => {
+      filters.origine = ''
+      updateFilterChrome()
+      renderLists()
+    },
+  })
+}
+
+function updateFilterChrome() {
+  // No-op now that filters are inline; kept for the call-site signature.
+}
+
+function renderSkillFilterTags() {
+  const container = document.getElementById('filter-skill-tags')
+  if (!container) return
+  container.innerHTML = filters.skillIds.map(id => {
+    const skill = allSkills.find(s => s.id === id)
+    if (!skill) return ''
+    return `
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-marea-teal-light text-marea-teal">
+        ${escapeHtml(skill.name)}
+        <button type="button" class="hover:text-red-500 inline-flex" data-remove-skill-filter="${escapeAttr(id)}" aria-label="Rimuovi">
+          <i data-lucide="x" class="w-3 h-3"></i>
+        </button>
+      </span>
+    `
+  }).join('')
+  createIcons({ icons: { X } })
+  container.querySelectorAll('[data-remove-skill-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.removeSkillFilter
+      filters.skillIds = filters.skillIds.filter(x => x !== id)
+      renderSkillFilterTags()
+      renderLists()
+    })
+  })
+}
+
 async function loadPionieri() {
+  // Admins query the base table (includes email). Pionieri can't read the
+  // base table — they go through pionieri_public (no email column).
+  const table = isAdminView() ? 'pionieri' : 'pionieri_public'
   try {
     const { data, error } = await supabase
-      .from('pionieri')
+      .from(table)
       .select('*, pioniere_skills(skill_id, proficiency, skill:skills(id, name, category))')
       .order('full_name')
 
     if (error) throw error
     allPionieri = data || []
-  } catch {
+  } catch (err) {
+    console.error('Errore nel caricamento Pionieri:', err)
     allPionieri = []
   }
-  renderList()
+  renderLists()
 }
 
-function renderList(filter = '') {
-  const container = document.getElementById('pionieri-list')
-  if (!container) return
-
-  let filtered = allPionieri
-  if (filter.trim()) {
-    const q = filter.toLowerCase()
-    filtered = allPionieri.filter(p =>
-      p.full_name?.toLowerCase().includes(q) ||
-      p.company?.toLowerCase().includes(q) ||
-      p.location?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q) ||
-      p.pioniere_skills?.some(ps => ps.skill?.name?.toLowerCase().includes(q))
-    )
-  }
-
-  const countEl = document.getElementById('pionieri-count')
-  if (countEl) countEl.textContent = `${allPionieri.length} Pionieri`
-
-  if (filtered.length === 0) {
-    container.innerHTML = `
-      <div class="text-center py-16" style="column-span: all">
-        <svg class="w-12 h-12 text-marea-border mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        <p class="text-marea-gray mb-2">${filter ? 'Nessun risultato trovato.' : 'Nessun Pioniere ancora registrato.'}</p>
-        ${!filter ? '<p class="text-sm text-marea-gray/60">Clicca "Aggiungi Pioniere" per iniziare.</p>' : ''}
-      </div>
-    `
-    return
-  }
-
-  container.innerHTML = filtered.map(p => `
+function renderCard(p, { matchHint } = {}) {
+  return `
     <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer pioniere-card break-inside-avoid" data-id="${escapeAttr(p.id)}">
       <div class="flex items-start gap-4">
         <div class="w-11 h-11 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
@@ -120,8 +304,8 @@ function renderList(filter = '') {
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-marea-gray">
             ${p.company ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>${escapeHtml(p.company)}</span>` : ''}
             ${p.location ? `<span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${escapeHtml(p.location)}</span>` : ''}
-
           </div>
+          ${matchHint ? `<p class="text-xs text-marea-teal font-medium mt-2">${escapeHtml(matchHint)}</p>` : ''}
           ${(p.pioniere_skills || []).length > 0 ? `
             <div class="flex flex-wrap gap-1.5 mt-3">
               ${(p.pioniere_skills || []).map(ps => `
@@ -132,14 +316,68 @@ function renderList(filter = '') {
         </div>
       </div>
     </div>
-  `).join('')
+  `
+}
 
-  container.querySelectorAll('.pioniere-card').forEach(card => {
+function attachCardClicks(containerEl) {
+  containerEl.querySelectorAll('.pioniere-card').forEach(card => {
     card.addEventListener('click', () => {
       const p = allPionieri.find(p => p.id === card.dataset.id)
       if (p) openPioniereDetail(p)
     })
   })
+}
+
+function renderLists() {
+  const countEl = document.getElementById('pionieri-count')
+  if (countEl) countEl.textContent = `${allPionieri.length} Pionieri`
+
+  // ── Match section (pioniere view only) — fixed top 6, NOT affected by filters ──
+  const matchSection = document.getElementById('pionieri-match-section')
+  const matchList = document.getElementById('pionieri-match-list')
+  if (matchSection && matchList) {
+    if (!isAdminView() && currentPioniere) {
+      const MAX_MATCHES = 6
+      const matches = allPionieri
+        .filter(p => p.id !== currentPioniere.id)
+        .map(p => ({ p, score: computeMatchScore(p, currentPioniere) }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_MATCHES)
+      if (matches.length > 0) {
+        matchSection.classList.remove('hidden')
+        matchList.innerHTML = matches.map(({ p }) =>
+          renderCard(p, { matchHint: matchExplanation(p, currentPioniere) })
+        ).join('')
+        attachCardClicks(matchList)
+      } else {
+        matchSection.classList.add('hidden')
+      }
+    } else {
+      matchSection.classList.add('hidden')
+    }
+  }
+
+  // ── A-Z section (everyone visible to this user, filtered) ──
+  const filtered = applyFilters(allPionieri)
+  const container = document.getElementById('pionieri-list')
+  if (!container) return
+
+  if (filtered.length === 0) {
+    const anyFilter = filters.search || filters.skillIds.length || filters.residenza || filters.origine
+    container.innerHTML = `
+      <div class="text-center py-16" style="column-span: all">
+        <svg class="w-12 h-12 text-marea-border mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <p class="text-marea-gray mb-2">${anyFilter ? 'Nessun risultato trovato.' : 'Nessun Pioniere ancora registrato.'}</p>
+        ${!anyFilter && isAdminView() ? '<p class="text-sm text-marea-gray/60">Clicca "Aggiungi Pioniere" per iniziare.</p>' : ''}
+      </div>
+    `
+    return
+  }
+
+  const sorted = [...filtered].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'it'))
+  container.innerHTML = sorted.map(p => renderCard(p)).join('')
+  attachCardClicks(container)
 }
 
 
@@ -176,6 +414,7 @@ function openPioniereDetail(pioniere) {
 
       <!-- Info -->
       <div class="bg-marea-cream/50 rounded-xl p-4 space-y-3">
+        ${isAdminView() ? `
         <div class="flex items-center gap-3">
           <span class="w-8 h-8 rounded-lg ${pioniere.email ? 'bg-white' : 'bg-gray-50'} flex items-center justify-center flex-shrink-0">
             <svg class="w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -192,6 +431,22 @@ function openPioniereDetail(pioniere) {
             </div>
           </div>
         </div>
+        ` : ''}
+        ${(() => {
+          const href = safeUrl(pioniere.linkedin_url)
+          if (!href) return ''
+          return `
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-marea-gray" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs text-marea-gray">LinkedIn</p>
+            <a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-marea-teal hover:underline truncate block">${escapeHtml(href)}</a>
+          </div>
+        </div>
+          `
+        })()}
         ${iconField(
           '<svg class="w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>',
           'Azienda / Ente', pioniere.company
@@ -208,6 +463,17 @@ function openPioniereDetail(pioniere) {
           '<svg class="w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
           'Residenza attuale', pioniere.location
         )}
+        ${pioniere.bio ? `
+        <div class="flex items-start gap-3 pt-1">
+          <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg class="w-4 h-4 text-marea-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </span>
+          <div>
+            <p class="text-xs text-marea-gray">Bio</p>
+            <p class="text-sm font-medium text-marea-black whitespace-pre-wrap">${escapeHtml(pioniere.bio)}</p>
+          </div>
+        </div>
+        ` : ''}
       </div>
 
       <!-- Skills -->
@@ -221,6 +487,7 @@ function openPioniereDetail(pioniere) {
       ` : ''}
     </div>
 
+    ${isAdminView() ? `
     <div class="flex items-center justify-between pt-4 pb-1 mt-6 border-t border-marea-border/60 sticky bottom-0 bg-white">
       <button type="button" id="delete-pioniere-btn" class="text-sm text-red-500 hover:text-red-700 font-medium transition-colors">Elimina pioniere</button>
       <button type="button" id="edit-pioniere-btn" class="btn-gold py-2.5 px-6">
@@ -228,6 +495,7 @@ function openPioniereDetail(pioniere) {
         Modifica
       </button>
     </div>
+    ` : ''}
   `
 
   showModal(renderModal({
@@ -315,6 +583,24 @@ function openPioniereForm(pioniere = null) {
             <option value="F" ${pioniere?.gender === 'F' ? 'selected' : ''}>F</option>
           </select>
         </div>
+        <div>
+          <label class="block text-sm font-medium text-marea-black mb-1.5">Disponibilit&agrave;</label>
+          ${renderAvailabilitySelect({
+            name: 'availability',
+            value: pioniere?.availability,
+            selectClass: 'w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all bg-white',
+          })}
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-marea-black mb-1.5">LinkedIn</label>
+        <input type="url" name="linkedin_url" value="${escapeAttr(pioniere?.linkedin_url)}" placeholder="https://www.linkedin.com/in/..."
+               class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-marea-black mb-1.5">Bio</label>
+        <textarea name="bio" rows="3" placeholder="Breve biografia..."
+                  class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all resize-y">${escapeHtml(pioniere?.bio || '')}</textarea>
       </div>
       <div>
         <label class="block text-sm font-medium text-marea-black mb-1.5">Competenze</label>
@@ -354,14 +640,18 @@ function openPioniereForm(pioniere = null) {
     const unlock = withSubmitLock(form)
     if (!unlock) return
     const fd = new FormData(form)
+    const emailRaw = (fd.get('email') || '').toString().trim().toLowerCase()
     const record = {
       full_name: fd.get('full_name'),
-      email: fd.get('email') || null,
+      email: emailRaw || null,
       company: fd.get('company') || null,
       role: fd.get('role') || null,
       origin: fd.get('origin') || null,
       location: fd.get('location') || null,
       gender: fd.get('gender') || null,
+      availability: fd.get('availability') || null,
+      linkedin_url: (fd.get('linkedin_url') || '').toString().trim() || null,
+      bio: (fd.get('bio') || '').toString().trim() || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -384,6 +674,12 @@ function openPioniereForm(pioniere = null) {
         await supabase.from('pioniere_skills').insert(
           selectedSkillIds.map(skillId => ({ pioniere_id: pioniereId, skill_id: skillId }))
         )
+      }
+
+      // Auto-provision a Supabase auth user so the pioniere can sign in via
+      // magic link. Idempotent; safe to call on every save.
+      if (record.email) {
+        provisionAuthForPioniere(record.email)
       }
 
       closeModal()
