@@ -17,7 +17,7 @@ export function renderAvailabilitySelect({ name = 'availability', value = '', se
   const isLegacy = current && !AVAILABILITY_OPTIONS.includes(current)
   return `
     <select name="${escapeAttr(name)}" class="${escapeAttr(selectClass)}">
-      <option value="" ${current === '' ? 'selected' : ''}>—</option>
+      <option value="" ${current === '' ? 'selected' : ''}>Seleziona</option>
       ${isLegacy ? `<option value="${escapeAttr(current)}" selected>${escapeHtml(current)} (esistente)</option>` : ''}
       ${AVAILABILITY_OPTIONS.map(opt => `
         <option value="${escapeAttr(opt)}" ${current === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>

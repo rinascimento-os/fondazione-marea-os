@@ -9,7 +9,6 @@ const ADMIN_NAV_ITEMS = [
   { hash: '#/progetti', label: 'Progetti', icon: projectsIcon },
   { hash: '#/matching', label: 'Matching', icon: matchingIcon },
   { hash: '#/timebank', label: 'Banca del Tempo', icon: timebankIcon },
-  { hash: '#/vetrina', label: 'Impatto Globale', icon: showcaseIcon },
 ]
 
 const PIONIERE_NAV_ITEMS = [
@@ -74,7 +73,9 @@ function showcaseIcon() {
 export function renderLayout(contentHtml, currentHash) {
   const role = getRole()
   const navItems = role?.viewMode === 'pioniere' ? PIONIERE_NAV_ITEMS : ADMIN_NAV_ITEMS
-  const activeItem = navItems.find(item => currentHash.startsWith(item.hash)) || navItems[0]
+  const activeItem = currentHash.startsWith('#/vetrina')
+    ? { label: 'Impatto Globale' }
+    : navItems.find(item => currentHash.startsWith(item.hash)) || navItems[0]
   const showSwitcher = role?.kind === 'dual'
   const otherMode = role?.viewMode === 'admin' ? 'pioniere' : 'admin'
   const otherModeLabel = otherMode === 'admin' ? 'Vai a vista Admin' : 'Vai a vista Pioniere'
@@ -107,7 +108,7 @@ export function renderLayout(contentHtml, currentHash) {
           }).join('')}
         </nav>
 
-        ${role?.viewMode === 'pioniere' ? renderShowcaseCard() : ''}
+        ${renderShowcaseCard()}
 
         <!-- Footer -->
         <div class="p-3 border-t border-white/10 space-y-1">
@@ -140,7 +141,7 @@ export function renderLayout(contentHtml, currentHash) {
           </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-4 lg:p-8">
+        <div class="flex-1 overflow-y-auto overscroll-none p-4 lg:p-8">
           <div class="page-transition max-w-7xl mx-auto">
             ${contentHtml}
           </div>
