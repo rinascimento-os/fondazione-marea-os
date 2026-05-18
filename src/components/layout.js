@@ -77,7 +77,7 @@ export function renderLayout(contentHtml, currentHash) {
   const activeItem = navItems.find(item => currentHash.startsWith(item.hash)) || navItems[0]
   const showSwitcher = role?.kind === 'dual'
   const otherMode = role?.viewMode === 'admin' ? 'pioniere' : 'admin'
-  const otherModeLabel = otherMode === 'admin' ? 'Vista Admin' : 'Vista Pioniere'
+  const otherModeLabel = otherMode === 'admin' ? 'Vai a vista Admin' : 'Vai a vista Pioniere'
 
   return `
     <div class="flex h-screen overflow-hidden">

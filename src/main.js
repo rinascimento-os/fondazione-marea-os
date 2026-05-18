@@ -188,6 +188,13 @@ async function init() {
       return
     }
     const wasSignedIn = !!currentSession
+    const sameUser = Boolean(
+      session?.user?.id && currentSession?.user?.id && session.user.id === currentSession.user.id
+    )
+    if (event === 'SIGNED_IN' && wasSignedIn && sameUser) {
+      currentSession = session
+      return
+    }
     currentSession = session
     if (!session) {
       clearViewMode()

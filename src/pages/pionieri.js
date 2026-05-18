@@ -9,7 +9,7 @@ import { escapeAttr, getInitials, withSubmitLock } from '../utils/helpers.js'
 import { getRole } from '../role.js'
 import { renderAvailabilitySelect } from '../utils/availability.js'
 import { safeUrl } from '../utils/url.js'
-import { createIcons, Search, X } from 'lucide'
+import { createIcons, ChevronLeft, ChevronRight, Search, X } from 'lucide'
 
 let allPionieri = []
 let allSkills = []
@@ -24,10 +24,27 @@ function computeMatchScore(p, anchor) {
   if (!anchor || !p || p.id === anchor.id) return 0
   const anchorSkillIds = new Set((anchor.pioniere_skills || []).map(ps => ps.skill_id))
   const overlap = (p.pioniere_skills || []).filter(ps => anchorSkillIds.has(ps.skill_id)).length
-  let score = overlap * 2
-  if (p.location && anchor.location && p.location.trim().toLowerCase() === anchor.location.trim().toLowerCase()) score += 5
+  let score = overlap * 3
+  if (p.location && anchor.location && p.location.trim().toLowerCase() === anchor.location.trim().toLowerCase()) score += 4
   if (p.origin && anchor.origin && p.origin.trim().toLowerCase() === anchor.origin.trim().toLowerCase()) score += 1
   return score
+}
+
+function hasMeaningfulMatch(p, anchor) {
+  if (!anchor || !p || p.id === anchor.id) return false
+  const anchorSkillIds = new Set((anchor.pioniere_skills || []).map(ps => ps.skill_id))
+  const hasSharedSkill = (p.pioniere_skills || []).some(ps => anchorSkillIds.has(ps.skill_id))
+  const hasSameResidence = Boolean(
+    p.location && anchor.location && p.location.trim().toLowerCase() === anchor.location.trim().toLowerCase()
+  )
+  return hasSharedSkill || hasSameResidence
+}
+
+function hasOriginOnlyMatch(p, anchor) {
+  if (!anchor || !p || p.id === anchor.id || hasMeaningfulMatch(p, anchor)) return false
+  return Boolean(
+    p.origin && anchor.origin && p.origin.trim().toLowerCase() === anchor.origin.trim().toLowerCase()
+  )
 }
 
 function matchExplanation(p, anchor) {
@@ -107,20 +124,61 @@ export function renderPionieri() {
       </button>
     </div>
   ` : ''
+  const countLoader = '<svg class="w-3 h-3 inline animate-spin text-marea-navy/40" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>'
+  const matchSectionInitialClass = isAdminView() ? 'hidden mb-12' : 'mb-12'
+  const matchSkeleton = Array.from({ length: 3 }).map(() => `
+    <div class="shrink-0 w-[20rem] sm:w-[22rem] snap-start">
+      <div class="h-[14.75rem] rounded-lg border border-marea-border bg-white p-4 shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="h-11 w-11 flex-shrink-0 rounded-full bg-marea-light"></div>
+          <div class="min-w-0 flex-1 space-y-2 pt-1">
+            <div class="h-4 w-36 rounded bg-marea-warm-gray"></div>
+            <div class="h-3 w-28 rounded bg-marea-warm-gray"></div>
+          </div>
+        </div>
+        <div class="ml-14 mt-4 space-y-2">
+          <div class="h-3 w-20 rounded bg-marea-warm-gray"></div>
+          <div class="flex gap-1.5">
+            <div class="h-6 w-28 rounded-full bg-marea-light"></div>
+            <div class="h-6 w-24 rounded-full bg-marea-light"></div>
+          </div>
+        </div>
+        <div class="mt-3 flex justify-end">
+          <div class="h-7 w-7 rounded-lg bg-marea-warm-gray"></div>
+        </div>
+      </div>
+    </div>
+  `).join('')
 
   return `
     <div>
       ${adminControls ? `<div class="flex justify-end mb-6">${adminControls}</div>` : ''}
 
-      <div id="pionieri-match-section" class="hidden mb-10">
-        <h2 class="font-heading text-xl text-marea-black mb-3">Pionieri affini a te</h2>
-        <div id="pionieri-match-list" class="flex gap-4 overflow-x-auto pb-2 snap-x"></div>
+      <div id="pionieri-match-section" class="${matchSectionInitialClass}">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <h2 class="font-heading text-xl text-marea-black">Affini a te</h2>
+            <span id="pionieri-match-count" class="text-xs font-semibold text-marea-navy bg-marea-navy/10 px-2.5 py-1 rounded-full whitespace-nowrap">${isAdminView() ? '' : countLoader}</span>
+          </div>
+          <div id="pionieri-match-controls" class="hidden items-center gap-1">
+            <button type="button" id="pionieri-match-prev" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-marea-border bg-white text-marea-navy shadow-sm transition hover:border-marea-teal/40 hover:text-marea-teal disabled:pointer-events-none disabled:opacity-35" aria-label="Pionieri precedenti">
+              <i data-lucide="chevron-left" class="h-4 w-4"></i>
+            </button>
+            <button type="button" id="pionieri-match-next" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-marea-border bg-white text-marea-navy shadow-sm transition hover:border-marea-teal/40 hover:text-marea-teal disabled:pointer-events-none disabled:opacity-35" aria-label="Pionieri successivi">
+              <i data-lucide="chevron-right" class="h-4 w-4"></i>
+            </button>
+          </div>
+        </div>
+        <div class="relative pt-2">
+          <div id="pionieri-match-list" class="scrollbar-hidden flex items-stretch gap-3 overflow-x-auto scroll-smooth pb-1 pt-2 snap-x">${isAdminView() ? '' : matchSkeleton}</div>
+          <div id="pionieri-match-fade" class="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-marea-cream to-transparent"></div>
+        </div>
       </div>
 
       <div>
-        <div class="flex items-baseline gap-3 mb-3 flex-wrap">
+        <div class="flex items-center gap-3 mb-3 flex-wrap">
           <h2 class="font-heading text-xl text-marea-black">Tutti i Pionieri (A-Z)</h2>
-          <span id="pionieri-count" class="text-xs font-semibold text-marea-navy bg-marea-navy/10 px-2.5 py-1 rounded-full whitespace-nowrap"><svg class="w-3 h-3 inline animate-spin text-marea-navy/40" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></span>
+          <span id="pionieri-count" class="text-xs font-semibold text-marea-navy bg-marea-navy/10 px-2.5 py-1 rounded-full whitespace-nowrap">${countLoader}</span>
         </div>
         <div id="pionieri-filters" class="mb-4">
           <div class="flex flex-wrap items-center gap-2">
@@ -146,7 +204,7 @@ export function renderPionieri() {
 
 export async function initPionieri() {
   filters = { search: '', skillIds: [], residenza: '', origine: '' }
-  createIcons({ icons: { Search, X } })
+  createIcons({ icons: { ChevronLeft, ChevronRight, Search, X } })
 
   try {
     allSkills = await loadSkills()
@@ -154,7 +212,7 @@ export async function initPionieri() {
     allSkills = []
   }
 
-  await loadPionieri()
+  await loadPionieri({ render: false })
 
   // Resolve the logged-in pioniere's row (anchor for match scoring).
   const role = getRole()
@@ -163,6 +221,7 @@ export async function initPionieri() {
     : null
 
   initSearchableFilters()
+  renderLists()
 
   if (isAdminView()) {
     document.getElementById('add-pioniere-btn')?.addEventListener('click', () => openPioniereForm())
@@ -276,7 +335,7 @@ function renderSkillFilterTags() {
   })
 }
 
-async function loadPionieri() {
+async function loadPionieri({ render = true } = {}) {
   // Admins query the base table (includes email). Pionieri can't read the
   // base table — they go through pionieri_public (no email column).
   const table = isAdminView() ? 'pionieri' : 'pionieri_public'
@@ -292,7 +351,7 @@ async function loadPionieri() {
     console.error('Errore nel caricamento Pionieri:', err)
     allPionieri = []
   }
-  renderLists()
+  if (render) renderLists()
 }
 
 function renderCard(p, { matchHint } = {}) {
@@ -322,6 +381,105 @@ function renderCard(p, { matchHint } = {}) {
   `
 }
 
+function renderMatchCard(p, anchor) {
+  const skills = p.pioniere_skills || []
+  const anchorSkillIds = new Set((anchor?.pioniere_skills || []).map(ps => ps.skill_id))
+  const sharedSkills = skills.filter(ps => anchorSkillIds.has(ps.skill_id))
+  const sameResidence = Boolean(
+    p.location && anchor?.location && p.location.trim().toLowerCase() === anchor.location.trim().toLowerCase()
+  )
+  const sameOrigin = Boolean(
+    p.origin && anchor?.origin && p.origin.trim().toLowerCase() === anchor.origin.trim().toLowerCase()
+  )
+  const commonChips = [
+    ...sharedSkills
+      .map(ps => ps.skill?.name)
+      .filter(Boolean)
+      .map(value => ({ value, type: 'skill' })),
+    sameResidence ? { label: 'Residenza', value: p.location, type: 'place' } : null,
+    sameOrigin ? { label: 'Origine', value: p.origin, type: 'place' } : null,
+  ].filter(Boolean)
+  const visibleChips = commonChips.slice(0, 3)
+  const hiddenChipCount = Math.max(0, commonChips.length - visibleChips.length)
+  const openProfileIcon = `
+    <span class="absolute bottom-4 right-4 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-marea-border bg-white text-marea-gray transition group-hover:border-marea-teal/30 group-hover:text-marea-teal" aria-hidden="true">
+      <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
+    </span>
+  `
+
+  return `
+    <div class="group relative flex h-[14.75rem] cursor-pointer flex-col overflow-hidden rounded-lg border border-marea-border bg-white p-4 pb-14 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md pioniere-card" data-id="${escapeAttr(p.id)}">
+      <div class="flex items-start gap-3">
+        <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-marea-teal-light ring-1 ring-marea-teal/10">
+          <span class="text-sm font-bold text-marea-teal">${escapeHtml(getInitials(p.full_name))}</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="line-clamp-2 text-base font-semibold leading-snug text-marea-black">${escapeHtml(p.full_name)}</p>
+          ${p.company ? `
+            <p class="mt-1 truncate text-sm leading-snug text-marea-gray">${escapeHtml(p.company)}</p>
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="ml-14 mt-4 pr-2">
+        <p class="text-[0.68rem] font-semibold uppercase tracking-wide text-marea-gray/75">In comune</p>
+        <div class="mt-2 flex flex-wrap gap-1.5 overflow-hidden">
+          ${visibleChips.map(chip => `
+            <span class="inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold leading-snug ${chip.type === 'skill' ? 'bg-marea-teal-light text-marea-teal' : 'bg-marea-dark/10 text-marea-dark'}">
+              ${chip.label ? `<span>${escapeHtml(chip.label)}:</span>` : ''}
+              <span class="truncate">${escapeHtml(chip.value)}</span>
+            </span>
+          `).join('')}
+          ${hiddenChipCount > 0 ? `
+            <span class="inline-flex items-center rounded-full bg-marea-dark/10 px-2.5 py-1 text-xs font-semibold leading-snug text-marea-dark">
+              +${hiddenChipCount}
+            </span>
+          ` : ''}
+        </div>
+      </div>
+
+      ${openProfileIcon}
+    </div>
+  `
+}
+
+function initMatchCarouselControls(matchCount) {
+  const matchList = document.getElementById('pionieri-match-list')
+  const controls = document.getElementById('pionieri-match-controls')
+  const countEl = document.getElementById('pionieri-match-count')
+  const fadeEl = document.getElementById('pionieri-match-fade')
+  const prevBtn = document.getElementById('pionieri-match-prev')
+  const nextBtn = document.getElementById('pionieri-match-next')
+  if (!matchList || !controls || !countEl || !prevBtn || !nextBtn) return
+
+  countEl.textContent = `${matchCount} suggeriti`
+  controls.classList.toggle('hidden', matchCount < 2)
+  controls.classList.toggle('flex', matchCount >= 2)
+
+  const updateButtons = () => {
+    const maxScroll = matchList.scrollWidth - matchList.clientWidth
+    const hasOverflow = maxScroll > 4
+    const hasMoreRight = hasOverflow && matchList.scrollLeft < maxScroll - 4
+    prevBtn.disabled = !hasOverflow || matchList.scrollLeft <= 4
+    nextBtn.disabled = !hasMoreRight
+    fadeEl?.classList.toggle('hidden', !hasMoreRight)
+  }
+
+  const scrollByCard = (direction) => {
+    const firstCard = matchList.querySelector('[data-carousel-card]')
+    const gap = 12
+    const distance = (firstCard?.getBoundingClientRect().width || 344) + gap
+    matchList.scrollBy({ left: direction * distance, behavior: 'smooth' })
+    window.setTimeout(updateButtons, 240)
+  }
+
+  prevBtn.onclick = () => scrollByCard(-1)
+  nextBtn.onclick = () => scrollByCard(1)
+  matchList.onscroll = updateButtons
+  createIcons({ icons: { ChevronLeft, ChevronRight } })
+  window.requestAnimationFrame(updateButtons)
+}
+
 function attachCardClicks(containerEl) {
   containerEl.querySelectorAll('.pioniere-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -340,19 +498,28 @@ function renderLists() {
   const matchList = document.getElementById('pionieri-match-list')
   if (matchSection && matchList) {
     if (!isAdminView() && currentPioniere) {
-      const MAX_MATCHES = 6
-      const matches = allPionieri
+      const MAX_MATCHES = 12
+      const MIN_MATCH_SCORE = 3
+      const scoredMatches = allPionieri
         .filter(p => p.id !== currentPioniere.id)
         .map(p => ({ p, score: computeMatchScore(p, currentPioniere) }))
-        .filter(({ score }) => score > 0)
+
+      const strongMatches = scoredMatches
+        .filter(({ p, score }) => score >= MIN_MATCH_SCORE && hasMeaningfulMatch(p, currentPioniere))
         .sort((a, b) => b.score - a.score)
         .slice(0, MAX_MATCHES)
+      const fallbackMatches = scoredMatches
+        .filter(({ p }) => hasOriginOnlyMatch(p, currentPioniere))
+        .sort((a, b) => (a.p.full_name || '').localeCompare(b.p.full_name || '', 'it'))
+        .slice(0, Math.min(6, MAX_MATCHES))
+      const matches = strongMatches.length > 0 ? strongMatches : fallbackMatches
       if (matches.length > 0) {
         matchSection.classList.remove('hidden')
         matchList.innerHTML = matches.map(({ p }) =>
-          `<div class="shrink-0 w-80 snap-start">${renderCard(p, { matchHint: matchExplanation(p, currentPioniere) })}</div>`
+          `<div data-carousel-card class="shrink-0 w-[20rem] sm:w-[22rem] snap-start">${renderMatchCard(p, currentPioniere)}</div>`
         ).join('')
         attachCardClicks(matchList)
+        initMatchCarouselControls(matches.length)
       } else {
         matchSection.classList.add('hidden')
       }
