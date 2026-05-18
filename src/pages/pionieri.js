@@ -112,6 +112,11 @@ export function renderPionieri() {
     <div>
       ${adminControls ? `<div class="flex justify-end mb-6">${adminControls}</div>` : ''}
 
+      <div id="pionieri-match-section" class="hidden mb-10">
+        <h2 class="font-heading text-xl text-marea-black mb-3">Pionieri affini a te</h2>
+        <div id="pionieri-match-list" class="flex gap-4 overflow-x-auto pb-2 snap-x"></div>
+      </div>
+
       <div>
         <div class="flex items-baseline gap-3 mb-3 flex-wrap">
           <h2 class="font-heading text-xl text-marea-black">Tutti i Pionieri (A-Z)</h2>
@@ -129,11 +134,6 @@ export function renderPionieri() {
             <div class="shrink-0 w-40">${renderSearchableSelect({ id: 'filter-origine', placeholder: 'Origine' })}</div>
           </div>
           <div id="filter-skill-tags" class="flex flex-wrap gap-1.5 mt-2"></div>
-        </div>
-
-        <div id="pionieri-match-section" class="hidden mb-10">
-          <h2 class="font-heading text-xl text-marea-black mb-3">Pionieri affini a te</h2>
-          <div id="pionieri-match-list" class="columns-1 lg:columns-2 gap-4 space-y-4"></div>
         </div>
 
         <div id="pionieri-list" class="columns-1 lg:columns-2 gap-4 space-y-4">
@@ -350,7 +350,7 @@ function renderLists() {
       if (matches.length > 0) {
         matchSection.classList.remove('hidden')
         matchList.innerHTML = matches.map(({ p }) =>
-          renderCard(p, { matchHint: matchExplanation(p, currentPioniere) })
+          `<div class="shrink-0 w-80 snap-start">${renderCard(p, { matchHint: matchExplanation(p, currentPioniere) })}</div>`
         ).join('')
         attachCardClicks(matchList)
       } else {
