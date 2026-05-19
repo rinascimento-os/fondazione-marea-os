@@ -99,7 +99,7 @@ async function loadOpenNeeds() {
     const { data } = await supabase
       .from('project_needs')
       .select('*, skill:skills(id, name), project:projects(id, name, email, status)')
-      .eq('status', 'open')
+      .in('status', ['open', 'matched'])
       .order('urgency')
 
     // Exclude needs from completed projects
