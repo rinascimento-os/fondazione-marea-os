@@ -79,9 +79,10 @@ function renderForm(feedback = '') {
             <h3 class="text-lg text-marea-black">Informazioni personali</h3>
           </div>
           <div>
-            <label class="block text-sm font-medium text-marea-black mb-1.5">Nome e cognome</label>
+            <label class="block text-sm font-medium text-marea-black mb-1.5">Nome e cognome <span class="text-red-500">*</span></label>
             <input type="text" name="full_name" required value="${escapeAttr(pioniere.full_name)}"
                    class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
+            <p id="profilo-name-error" class="hidden text-xs text-red-600 mt-1.5">Nome e cognome sono obbligatori.</p>
           </div>
         </section>
 
@@ -144,7 +145,7 @@ function renderForm(feedback = '') {
         <section class="p-6 border-b border-marea-border/60">
           <div class="mb-5">
             <h3 class="text-lg text-marea-black">Competenze</h3>
-            <p class="text-sm text-marea-gray mt-1">Seleziona le competenze con cui vuoi essere trovato dagli altri Pionieri.</p>
+            <p class="text-sm text-marea-gray mt-1">Indica le competenze con cui puoi contribuire alla Fondazione.</p>
           </div>
           ${renderSkillPicker({
             selectedSkills: currentSkills,
@@ -217,7 +218,9 @@ function renderForm(feedback = '') {
     }
     const fullName = cleanStr(fd.get('full_name'))
     if (!fullName) {
-      showAlert('Il nome completo è obbligatorio.')
+      updateSaveState(form, picker, initialSnapshot)
+      form.querySelector('[name="full_name"]')?.focus()
+      showAlert('Nome e cognome sono obbligatori.')
       unlock()
       return
     }
@@ -373,7 +376,9 @@ function updateSaveState(form, picker, initialSnapshot) {
   if (!form || !btn) return
   const profile = profileFromForm(form, picker)
   const isDirty = snapshotProfile(profile, picker?.getSelected() || []) !== initialSnapshot
-  btn.disabled = !isDirty
+  const hasRequiredName = Boolean(cleanStr(profile.full_name))
+  btn.disabled = !isDirty || !hasRequiredName
+  updateNameValidation(form, hasRequiredName)
   if (isDirty) {
     btn.innerHTML = `
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -382,9 +387,17 @@ function updateSaveState(form, picker, initialSnapshot) {
   }
 }
 
+function updateNameValidation(form, hasRequiredName) {
+  const input = form.querySelector('[name="full_name"]')
+  const error = document.getElementById('profilo-name-error')
+  input?.classList.toggle('border-red-400', !hasRequiredName)
+  input?.classList.toggle('focus:border-red-500', !hasRequiredName)
+  error?.classList.toggle('hidden', hasRequiredName)
+}
+
 function completionItems(profile, skills) {
   return [
-    { label: 'Nome completo', done: Boolean(cleanStr(profile.full_name)) },
+    { label: 'Nome e cognome', done: Boolean(cleanStr(profile.full_name)) },
     { label: 'Ruolo', done: Boolean(cleanStr(profile.role)) },
     { label: 'Azienda / Ente', done: Boolean(cleanStr(profile.company)) },
     { label: 'Residenza attuale', done: Boolean(cleanStr(profile.location)) },
