@@ -81,7 +81,7 @@ export function renderLayout(contentHtml, currentHash) {
   const otherModeLabel = otherMode === 'admin' ? 'Vai a vista Admin' : 'Vai a vista Pioniere'
 
   return `
-    <div class="flex h-screen overflow-hidden">
+    <div class="fixed inset-0 flex overflow-hidden">
       <!-- Mobile overlay -->
       <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"></div>
 
