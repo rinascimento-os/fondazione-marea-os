@@ -9,6 +9,7 @@ import { safeUrl } from '../utils/url.js'
 
 let pioniere = null
 let allSkills = []
+let locationOptions = []
 
 export function renderProfilo() {
   return `
@@ -28,17 +29,19 @@ export async function initProfilo() {
   }
 
   try {
-    const [{ data: row, error: pErr }, skills] = await Promise.all([
+    const [{ data: row, error: pErr }, skills, locations] = await Promise.all([
       supabase
         .from('pionieri_public')
         .select('*, pioniere_skills(skill_id, skill:skills(id, name, category))')
         .eq('id', role.pioniereId)
         .single(),
       loadSkills(),
+      loadLocationOptions(),
     ])
     if (pErr) throw pErr
     pioniere = row
     allSkills = skills || []
+    locationOptions = locations || []
   } catch (err) {
     console.error('Errore nel caricamento profilo:', err)
     document.getElementById('profilo-content').innerHTML = `
@@ -111,10 +114,11 @@ function renderForm(feedback = '') {
             <p class="text-sm text-marea-gray mt-1">Indica dove vivi, la tua disponibilit&agrave; e il link al tuo profilo LinkedIn.</p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
+            <div class="relative" id="profilo-location-container">
               <label class="block text-sm font-medium text-marea-black mb-1.5">Residenza attuale</label>
-              <input type="text" name="location" value="${escapeAttr(pioniere.location)}" placeholder="es. Milano, Londra"
-                     class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" />
+              <input type="text" id="profilo-location-input" name="location" value="${escapeAttr(pioniere.location)}" placeholder="es. Milano, Londra"
+                     class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all" autocomplete="off" />
+              <div id="profilo-location-dropdown" class="scrollbar-hidden absolute left-0 right-0 top-full mt-1 hidden max-h-56 overflow-y-auto rounded-xl border border-marea-border/70 bg-white shadow-lg z-30"></div>
             </div>
             <div>
               <label class="block text-sm font-medium text-marea-black mb-1.5">Disponibilit&agrave;</label>
@@ -203,6 +207,7 @@ function renderForm(feedback = '') {
     input.addEventListener('input', updateFromForm)
     input.addEventListener('change', updateFromForm)
   })
+  initLocationAutocomplete(updateFromForm)
   updateSaveState(form, picker, initialSnapshot)
   if (feedback) showHeaderFeedback()
 
@@ -230,7 +235,7 @@ function renderForm(feedback = '') {
         _full_name: fullName,
         _company: cleanStr(fd.get('company')),
         _role: cleanStr(fd.get('role')),
-        _location: cleanStr(fd.get('location')),
+        _location: normalizeCity(fd.get('location')),
         _availability: cleanStr(fd.get('availability')),
         _bio: cleanStr(fd.get('bio')),
         _linkedin_url: cleanStr(fd.get('linkedin_url')),
@@ -264,6 +269,10 @@ function renderForm(feedback = '') {
         .eq('id', pioniere.id)
         .single()
       if (refreshed) pioniere = refreshed
+      const normalizedLocation = normalizeCity(pioniere.location)
+      if (normalizedLocation && !locationOptions.some(loc => loc.toLowerCase() === normalizedLocation.toLowerCase())) {
+        locationOptions = [...locationOptions, normalizedLocation].sort((a, b) => a.localeCompare(b, 'it'))
+      }
 
       unlock()
       renderForm('Profilo aggiornato.')
@@ -279,6 +288,95 @@ function renderForm(feedback = '') {
 function cleanStr(v) {
   const s = (v || '').toString().trim()
   return s.length === 0 ? null : s
+}
+
+async function loadLocationOptions() {
+  try {
+    const { data, error } = await supabase
+      .from('pionieri_public')
+      .select('location')
+      .not('location', 'is', null)
+    if (error) throw error
+    const byKey = new Map()
+    ;(data || []).forEach(row => {
+      const normalized = normalizeCity(row.location)
+      if (!normalized) return
+      const key = normalized.toLowerCase()
+      if (!byKey.has(key)) byKey.set(key, normalized)
+    })
+    return [...byKey.values()].sort((a, b) => a.localeCompare(b, 'it'))
+  } catch (err) {
+    console.warn('Errore nel caricamento citt&agrave;:', err)
+    return []
+  }
+}
+
+function initLocationAutocomplete(onChange) {
+  const container = document.getElementById('profilo-location-container')
+  const input = document.getElementById('profilo-location-input')
+  const dropdown = document.getElementById('profilo-location-dropdown')
+  if (!container || !input || !dropdown || locationOptions.length === 0) return
+
+  const hide = () => {
+    dropdown.classList.add('hidden')
+    dropdown.innerHTML = ''
+  }
+
+  const render = () => {
+    const query = input.value.trim().toLocaleLowerCase('it-IT')
+    if (!query) {
+      hide()
+      return
+    }
+    const matches = locationOptions
+      .filter(location => location.toLocaleLowerCase('it-IT').startsWith(query))
+      .slice(0, 8)
+
+    if (matches.length === 0) {
+      hide()
+      return
+    }
+
+    dropdown.innerHTML = matches.map(location => `
+      <button type="button" class="block w-full px-4 py-2.5 text-left text-sm font-medium text-marea-black hover:bg-marea-light transition-colors" data-location="${escapeAttr(location)}">
+        ${escapeHtml(location)}
+      </button>
+    `).join('')
+    dropdown.classList.remove('hidden')
+
+    dropdown.querySelectorAll('[data-location]').forEach(btn => {
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault()
+        input.value = btn.dataset.location
+        hide()
+        onChange()
+      })
+    })
+  }
+
+  input.addEventListener('input', render)
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hide()
+  })
+  document.addEventListener('mousedown', (e) => {
+    if (!container.contains(e.target)) hide()
+  })
+}
+
+function normalizeCity(value) {
+  const cleaned = cleanStr(value)
+  if (!cleaned) return null
+  const compact = cleaned.replace(/\s+/g, ' ')
+  return compact.split(' ').map(part => {
+    return part
+      .split('-')
+      .map(piece => {
+        if (!piece) return piece
+        const lower = piece.toLocaleLowerCase('it-IT')
+        return lower.charAt(0).toLocaleUpperCase('it-IT') + lower.slice(1)
+      })
+      .join('-')
+  }).join(' ')
 }
 
 function renderHeaderActions(feedback = '') {
@@ -320,7 +418,7 @@ function snapshotProfile(profile, skills) {
     full_name: cleanStr(profile.full_name),
     company: cleanStr(profile.company),
     role: cleanStr(profile.role),
-    location: cleanStr(profile.location),
+    location: normalizeCity(profile.location),
     availability: cleanStr(profile.availability),
     bio: cleanStr(profile.bio),
     linkedin_url: cleanStr(profile.linkedin_url),
@@ -335,7 +433,7 @@ function profileFromForm(form, picker) {
     full_name: cleanStr(fd.get('full_name')),
     company: cleanStr(fd.get('company')),
     role: cleanStr(fd.get('role')),
-    location: cleanStr(fd.get('location')),
+    location: normalizeCity(fd.get('location')),
     availability: cleanStr(fd.get('availability')),
     bio: cleanStr(fd.get('bio')),
     linkedin_url: cleanStr(fd.get('linkedin_url')),
