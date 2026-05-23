@@ -41,7 +41,17 @@ export function initViewSelect() {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.viewMode
       setViewMode(mode)
-      window.location.hash = defaultRouteFor(mode)
+      const target = defaultRouteFor(mode)
+      // When the splash is shown on top of a hash that already equals the
+      // target (e.g. dual user lands on #/dashboard, no stored choice, splash
+      // renders, then they click Vista Admin → still #/dashboard), assigning
+      // the same value to location.hash does not fire 'hashchange'. Dispatch
+      // it manually so the router re-runs with the new viewMode.
+      if (window.location.hash === target) {
+        window.dispatchEvent(new HashChangeEvent('hashchange'))
+      } else {
+        window.location.hash = target
+      }
     })
   })
 }
