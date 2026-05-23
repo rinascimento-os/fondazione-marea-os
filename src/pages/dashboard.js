@@ -157,25 +157,72 @@ export function renderDashboard() {
 }
 
 let chartInstances = []
+const DASHBOARD_RETRY_DELAYS = [250, 900]
 
 function destroyCharts() {
   chartInstances.forEach(c => c.destroy())
   chartInstances = []
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function throwIfError(result, label) {
+  if (result?.error) {
+    const message = result.error.message || 'Errore sconosciuto'
+    throw new Error(`${label}: ${message}`)
+  }
+}
+
+async function loadDashboardData() {
+  const [pionieri, projects, timeEntries, allMatches, skills, needs] = await Promise.all([
+    supabase.from('pionieri').select('id', { count: 'exact', head: true }),
+    supabase.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+    supabase.from('time_entries').select('hours, date'),
+    supabase.from('matches').select('status, need:project_needs(status, project:projects(status))'),
+    supabase.from('pioniere_skills').select('skill:skills(name)'),
+    supabase.from('project_needs').select('urgency, status, project:projects(status)').in('status', ['open', 'matched']),
+  ])
+
+  throwIfError(pionieri, 'Pionieri totali')
+  throwIfError(projects, 'Progetti attivi')
+  throwIfError(timeEntries, 'Ore totali')
+  throwIfError(allMatches, 'Match attivi')
+  throwIfError(skills, 'Competenze')
+  throwIfError(needs, 'Bisogni')
+
+  return { pionieri, projects, timeEntries, allMatches, skills, needs }
+}
+
+async function loadDashboardDataWithRetry() {
+  let lastErr = null
+  for (let attempt = 0; attempt <= DASHBOARD_RETRY_DELAYS.length; attempt++) {
+    try {
+      const data = await loadDashboardData()
+      const allPrimaryStatsZero = (
+        (data.pionieri.count ?? 0) === 0 &&
+        (data.projects.count ?? 0) === 0 &&
+        (data.timeEntries.data || []).length === 0 &&
+        (data.allMatches.data || []).length === 0
+      )
+      if (!allPrimaryStatsZero || attempt === DASHBOARD_RETRY_DELAYS.length) return data
+      await sleep(DASHBOARD_RETRY_DELAYS[attempt])
+    } catch (err) {
+      lastErr = err
+      if (attempt === DASHBOARD_RETRY_DELAYS.length) throw err
+      await sleep(DASHBOARD_RETRY_DELAYS[attempt])
+    }
+  }
+  throw lastErr || new Error('Errore nel caricamento dashboard')
+}
+
 export async function initDashboard() {
   destroyCharts()
+  let statsRendered = false
 
   try {
-    const [pionieri, projects, timeEntries, allMatches, skills, needs] = await Promise.all([
-      supabase.from('pionieri').select('id', { count: 'exact', head: true }),
-      supabase.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('time_entries').select('hours, date'),
-      supabase.from('matches').select('status, need:project_needs(status, project:projects(status))'),
-      supabase.from('pioniere_skills').select('skill:skills(name)'),
-      supabase.from('project_needs').select('urgency, status, project:projects(status)').in('status', ['open', 'matched']),
-    ])
-
+    const { pionieri, projects, timeEntries, allMatches, skills, needs } = await loadDashboardDataWithRetry()
     const el = (id) => document.getElementById(id)
 
     // --- Stat cards ---
@@ -192,6 +239,7 @@ export async function initDashboard() {
 
     const totalHours = (timeEntries.data || []).reduce((sum, e) => sum + (parseFloat(e.hours) || 0), 0)
     if (el('stat-hours')) el('stat-hours').textContent = totalHours > 0 ? totalHours.toFixed(1) : '0'
+    statsRendered = true
 
     // --- Chart: Hours over time ---
     buildHoursChart(timeEntries.data || [])
@@ -268,15 +316,18 @@ export async function initDashboard() {
       `).join('')}</div>`
     }
   } catch (err) {
+    console.error('Errore nel caricamento dashboard:', err)
     const el = (id) => document.getElementById(id)
-    if (el('stat-pionieri')) el('stat-pionieri').textContent = '0'
-    if (el('stat-projects')) el('stat-projects').textContent = '0'
-    if (el('stat-matches')) el('stat-matches').textContent = '0'
-    if (el('stat-hours')) el('stat-hours').textContent = '0'
+    if (!statsRendered) {
+      if (el('stat-pionieri')) el('stat-pionieri').textContent = '—'
+      if (el('stat-projects')) el('stat-projects').textContent = '—'
+      if (el('stat-matches')) el('stat-matches').textContent = '—'
+      if (el('stat-hours')) el('stat-hours').textContent = '—'
+    }
     const activityEl = el('recent-activity')
     if (activityEl) activityEl.innerHTML = `
       <div class="text-center py-8">
-        <p class="text-sm text-marea-gray">Le tabelle del database devono ancora essere create.</p>
+        <p class="text-sm text-marea-gray">Errore nel caricamento della dashboard. Ricarica la pagina.</p>
       </div>
     `
   }

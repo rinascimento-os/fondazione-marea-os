@@ -131,14 +131,6 @@ select {
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
-/* Stat card decorative top border */
-.stat-card {
-  position: relative;
-  background:
-    linear-gradient(90deg, var(--color-marea-teal), var(--color-marea-yellow)) top / 100% 3px no-repeat,
-    white;
-}
-
 /* Tooltip */
 .tooltip {
   position: relative;
@@ -609,17 +601,6 @@ select.focus-ring {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-}
-
-/* Top accent border — teal to gold like the brand */
-.showcase-stat-card::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-marea-teal), var(--color-marea-yellow));
-  border-radius: 1.25rem 1.25rem 0 0;
-  opacity: 0.7;
 }
 
 .showcase-stat-card:hover {

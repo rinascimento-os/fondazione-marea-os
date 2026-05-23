@@ -7,3 +7,7 @@ CLAUDE.md
 sql_queries/
 test-*.csv
 brand_assets/main_website/
+
+# Local Netlify folder
+.netlify
+deno.lock

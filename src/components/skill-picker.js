@@ -7,7 +7,11 @@ export async function loadSkills() {
   return data || []
 }
 
-export function renderSkillPicker({ selectedSkills = [], inputId = 'skill-picker' }) {
+export function renderSkillPicker({
+  selectedSkills = [],
+  inputId = 'skill-picker',
+  placeholder = 'Cerca o aggiungi competenza...',
+}) {
   return `
     <div id="${inputId}-container" class="space-y-2">
       <div id="${inputId}-tags" class="flex flex-wrap gap-2">
@@ -21,7 +25,7 @@ export function renderSkillPicker({ selectedSkills = [], inputId = 'skill-picker
       <div class="relative">
         <input type="text" id="${inputId}-input"
                class="w-full px-4 py-2.5 rounded-xl border border-marea-border text-sm focus-ring transition-all"
-               placeholder="Cerca o aggiungi competenza..." autocomplete="off" />
+               placeholder="${escapeHtml(placeholder)}" autocomplete="off" />
         <div id="${inputId}-dropdown" class="absolute left-0 right-0 bottom-full mb-1 bg-white border border-marea-border/60 rounded-xl shadow-lg max-h-48 overflow-y-auto z-10 hidden"></div>
       </div>
       <input type="hidden" id="${inputId}-values" value='${JSON.stringify(selectedSkills.map(s => s.id))}' />
@@ -29,7 +33,15 @@ export function renderSkillPicker({ selectedSkills = [], inputId = 'skill-picker
   `
 }
 
-export function initSkillPicker({ inputId = 'skill-picker', skills = [], selectedSkills = [], onAdd, onRemove }) {
+export function initSkillPicker({
+  inputId = 'skill-picker',
+  skills = [],
+  selectedSkills = [],
+  allowCreate = true,
+  emptyMessage = 'Nessuna competenza trovata.',
+  onAdd,
+  onRemove,
+}) {
   const input = document.getElementById(`${inputId}-input`)
   const dropdown = document.getElementById(`${inputId}-dropdown`)
   const tagsContainer = document.getElementById(`${inputId}-tags`)
@@ -43,7 +55,7 @@ export function initSkillPicker({ inputId = 'skill-picker', skills = [], selecte
       s.name.toLowerCase().includes(filter.toLowerCase())
     )
 
-    if (available.length === 0 && filter.trim()) {
+    if (available.length === 0 && filter.trim() && allowCreate) {
       dropdown.innerHTML = `
         <button type="button" class="w-full text-left px-3 py-2 text-sm text-marea-teal hover:bg-marea-light skill-create">
           + Crea "${escapeHtml(filter.trim())}"
@@ -60,7 +72,16 @@ export function initSkillPicker({ inputId = 'skill-picker', skills = [], selecte
         }
       })
     } else if (available.length === 0) {
-      dropdown.classList.add('hidden')
+      if (filter.trim()) {
+        dropdown.innerHTML = `
+          <div class="px-3 py-2 text-sm text-marea-gray">
+            ${escapeHtml(emptyMessage)}
+          </div>
+        `
+        dropdown.classList.remove('hidden')
+      } else {
+        dropdown.classList.add('hidden')
+      }
     } else {
       dropdown.innerHTML = available.map(s => `
         <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-marea-light skill-option" data-skill-id="${s.id}">
