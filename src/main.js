@@ -58,11 +58,15 @@ const routes = {
   '#/progetti': { render: renderProjects, init: initProjects, adminOnly: true },
   '#/matching': { render: renderMatching, init: initMatching, adminOnly: true },
   '#/timebank': { render: renderTimebank, init: initTimebank, adminOnly: true },
-  '#/vetrina': { render: renderShowcase, init: initShowcase, fullscreen: true },
+  '#/vetrina': { render: renderShowcase, init: initShowcase, fullscreen: true, public: true },
   '#/profilo': { render: renderProfilo, init: initProfilo, pioniereOnly: true },
 }
 
 let currentSession = null
+
+function isPublicHash(hash) {
+  return Object.keys(routes).some(key => hash.startsWith(key) && routes[key].public)
+}
 
 async function router() {
   const hash = window.location.hash || '#/login'
@@ -75,6 +79,16 @@ async function router() {
     }
     app.innerHTML = renderLogin()
     initLogin()
+    return
+  }
+
+  // Public routes — reachable without auth, skip role-resolution and view-select.
+  // They render fullscreen (no sidebar) and never read the database directly.
+  const publicRouteKey = Object.keys(routes).find(key => hash.startsWith(key) && routes[key].public)
+  if (publicRouteKey) {
+    const route = routes[publicRouteKey]
+    app.innerHTML = route.render()
+    if (route.init) await route.init()
     return
   }
 
@@ -199,6 +213,9 @@ async function init() {
     if (!session) {
       clearViewMode()
       await resolveRole(null)
+      // Public routes (e.g. #/vetrina) stay reachable without auth — boot
+      // already rendered them; don't bounce to login or re-init the page.
+      if (isPublicHash(window.location.hash)) return
       if (window.location.hash !== '#/login') window.location.hash = '#/login'
       return
     }
