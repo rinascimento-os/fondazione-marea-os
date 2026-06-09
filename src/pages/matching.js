@@ -3,6 +3,7 @@ import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { showAlert, showConfirm } from '../utils/confirm-delete.js'
 import { escapeAttr, urgencyBadge, urgencyLabel, withSubmitLock, renderAvatar } from '../utils/helpers.js'
+import { signAvatars } from '../utils/avatar.js'
 
 let openNeeds = []
 let pionieri = []
@@ -125,6 +126,7 @@ async function loadPionieri() {
         m.need?.status !== 'fulfilled'
       ).length,
     }))
+    await signAvatars(pionieri)
   } catch {
     pionieri = []
   }
@@ -138,6 +140,7 @@ async function loadMatches() {
       .order('created_at', { ascending: false })
 
     allMatches = data || []
+    await signAvatars(allMatches.map(m => m.pioniere).filter(Boolean))
   } catch {
     allMatches = []
   }

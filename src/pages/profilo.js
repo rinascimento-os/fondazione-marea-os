@@ -6,6 +6,7 @@ import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/sk
 import { getRole } from '../role.js'
 import { renderAvailabilitySelect } from '../utils/availability.js'
 import { safeUrl } from '../utils/url.js'
+import { signAvatars, uploadOwnAvatar, signOneAvatar } from '../utils/avatar.js'
 
 let pioniere = null
 let allSkills = []
@@ -40,6 +41,7 @@ export async function initProfilo() {
     ])
     if (pErr) throw pErr
     pioniere = row
+    await signAvatars([pioniere])
     allSkills = skills || []
     locationOptions = locations || []
   } catch (err) {
@@ -66,7 +68,14 @@ function renderForm(feedback = '') {
         <section class="p-6 border-b border-marea-border/60">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div class="flex items-center gap-4 min-w-0">
-              ${renderAvatar(pioniere, { sizeClass: 'w-16 h-16', rounded: 'rounded-2xl', textClass: 'text-xl', initialsId: 'profilo-summary-initials' })}
+              <button type="button" id="profilo-avatar-btn" title="Cambia foto"
+                      class="relative group rounded-2xl focus-ring flex-shrink-0">
+                <span id="profilo-avatar-slot">${renderAvatar(pioniere, { sizeClass: 'w-16 h-16', rounded: 'rounded-2xl', textClass: 'text-xl', initialsId: 'profilo-summary-initials' })}</span>
+                <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-marea-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </span>
+              </button>
+              <input type="file" id="profilo-avatar-input" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" />
               <div class="flex-1 min-w-0">
                 <h2 id="profilo-summary-name" class="text-xl font-bold text-marea-black truncate">${escapeHtml(pioniere.full_name)}</h2>
                 <p id="profilo-summary-meta" class="text-sm text-marea-gray mt-1">${escapeHtml(formatRoleCompany(pioniere)) || 'Aggiungi ruolo e azienda per rendere il profilo pi&ugrave; chiaro.'}</p>
@@ -206,6 +215,7 @@ function renderForm(feedback = '') {
     input.addEventListener('change', updateFromForm)
   })
   initLocationAutocomplete(updateFromForm)
+  initAvatarUpload(form, picker)
   updateSaveState(form, picker, initialSnapshot)
   if (feedback) showHeaderFeedback()
 
@@ -237,6 +247,7 @@ function renderForm(feedback = '') {
         _availability: cleanStr(fd.get('availability')),
         _bio: cleanStr(fd.get('bio')),
         _linkedin_url: cleanStr(fd.get('linkedin_url')),
+        _avatar_url: pioniere.avatar_url || null,
       })
       if (profileErr) throw profileErr
 
@@ -286,6 +297,54 @@ function renderForm(feedback = '') {
 function cleanStr(v) {
   const s = (v || '').toString().trim()
   return s.length === 0 ? null : s
+}
+
+const avatarMarkup = () => renderAvatar(pioniere, {
+  sizeClass: 'w-16 h-16', rounded: 'rounded-2xl', textClass: 'text-xl', initialsId: 'profilo-summary-initials',
+})
+
+// The photo is saved on its own as soon as it's picked (independent of the
+// Salva button), preserving whatever the user has already saved in the text
+// fields. Unsaved edits in the form are left untouched.
+function initAvatarUpload(form, picker) {
+  const btn = document.getElementById('profilo-avatar-btn')
+  const input = document.getElementById('profilo-avatar-input')
+  const slot = document.getElementById('profilo-avatar-slot')
+  if (!btn || !input || !slot) return
+
+  btn.addEventListener('click', () => input.click())
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0]
+    input.value = '' // let the same file be re-picked after an error
+    if (!file) return
+
+    slot.innerHTML = `
+      <div class="w-16 h-16 rounded-2xl bg-marea-teal-light flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 animate-spin text-marea-teal" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+      </div>`
+    try {
+      const newPath = await uploadOwnAvatar(file, pioniere.id, pioniere.avatar_url)
+      const { error } = await supabase.rpc('update_my_profile', {
+        _full_name: pioniere.full_name,
+        _company: pioniere.company,
+        _role: pioniere.role,
+        _location: pioniere.location,
+        _availability: pioniere.availability,
+        _bio: pioniere.bio,
+        _linkedin_url: pioniere.linkedin_url,
+        _avatar_url: newPath,
+      })
+      if (error) throw error
+      pioniere.avatar_url = newPath
+      pioniere.avatarUrl = await signOneAvatar(newPath)
+      slot.innerHTML = avatarMarkup()
+      renderLiveProfile(form, picker) // refresh the public-preview avatar too
+    } catch (err) {
+      console.error('Errore nel caricamento della foto:', err)
+      slot.innerHTML = avatarMarkup()
+      showAlert(err.message || 'Caricamento non riuscito. Riprova.')
+    }
+  })
 }
 
 async function loadLocationOptions() {

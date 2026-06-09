@@ -13,7 +13,9 @@ export function getInitials(name) {
  */
 export function renderAvatar(pioniere, { sizeClass = 'w-11 h-11', rounded = 'rounded-full', textClass = 'text-sm', extraClass = '', initialsId = '' } = {}) {
   const name = pioniere?.full_name || ''
-  const url = safeUrl(pioniere?.avatar_url)
+  // `avatarUrl` is the signed display URL minted by signAvatars(); `avatar_url`
+  // is the raw private-bucket path and is not directly usable in <img>.
+  const url = safeUrl(pioniere?.avatarUrl)
   if (url) {
     return `<img src="${escapeAttr(url)}" alt="${escapeAttr(name)}" loading="lazy"
       class="${sizeClass} ${rounded} ${extraClass} object-cover flex-shrink-0 bg-marea-teal-light" />`

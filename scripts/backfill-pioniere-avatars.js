@@ -74,12 +74,11 @@ async function main() {
         .upload(objectPath, buffer, { contentType, upsert: true })
       if (upErr) throw upErr
 
-      const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(objectPath)
-      const avatarUrl = pub.publicUrl
-
+      // Bucket is private: store the bare object key, not a URL. The app mints
+      // short-lived signed URLs at render time (see src/utils/avatar.js).
       const { error: updErr } = await admin
         .from('pionieri')
-        .update({ avatar_url: avatarUrl })
+        .update({ avatar_url: objectPath })
         .eq('id', id)
       if (updErr) throw updErr
 
