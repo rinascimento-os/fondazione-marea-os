@@ -72,7 +72,14 @@ export async function uploadOwnAvatar(file, pioniereId, previousPath) {
   if (file.size > MAX_UPLOAD_BYTES) throw new Error('Immagine troppo grande (max 5MB).')
 
   const ext = EXT_BY_TYPE[file.type]
-  const path = `${pioniereId}.${ext}`
+  // Versioned key: a brand-new object path on every upload. Keeping the pioniere
+  // id as the first dot-segment preserves the storage RLS ownership check
+  // (split_part(name,'.',1) = pioniere id), but the changing path means other
+  // users' cached signed URLs (sessionStorage, keyed by path) and any CDN copy
+  // can never serve a stale image — their next load signs the new path fresh.
+  // The previous object is removed below.
+  const version = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  const path = `${pioniereId}.${version}.${ext}`
 
   const { error: upErr } = await supabase.storage
     .from(AVATARS_BUCKET)
