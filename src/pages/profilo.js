@@ -1,6 +1,6 @@
 import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
-import { escapeAttr, getInitials, withSubmitLock } from '../utils/helpers.js'
+import { escapeAttr, getInitials, withSubmitLock, renderAvatar } from '../utils/helpers.js'
 import { showAlert } from '../utils/confirm-delete.js'
 import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/skill-picker.js'
 import { getRole } from '../role.js'
@@ -66,9 +66,7 @@ function renderForm(feedback = '') {
         <section class="p-6 border-b border-marea-border/60">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div class="flex items-center gap-4 min-w-0">
-              <div class="w-16 h-16 rounded-2xl bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-                <span id="profilo-summary-initials" class="text-marea-teal font-bold text-xl">${escapeHtml(getInitials(pioniere.full_name))}</span>
-              </div>
+              ${renderAvatar(pioniere, { sizeClass: 'w-16 h-16', rounded: 'rounded-2xl', textClass: 'text-xl', initialsId: 'profilo-summary-initials' })}
               <div class="flex-1 min-w-0">
                 <h2 id="profilo-summary-name" class="text-xl font-bold text-marea-black truncate">${escapeHtml(pioniere.full_name)}</h2>
                 <p id="profilo-summary-meta" class="text-sm text-marea-gray mt-1">${escapeHtml(formatRoleCompany(pioniere)) || 'Aggiungi ruolo e azienda per rendere il profilo pi&ugrave; chiaro.'}</p>
@@ -568,9 +566,7 @@ function renderPreviewCard(profile, skills) {
       </div>
 
       <div class="flex items-center gap-4">
-        <div class="w-16 h-16 rounded-2xl bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-          <span class="text-marea-teal font-bold text-xl">${escapeHtml(getInitials(profile.full_name))}</span>
-        </div>
+        ${renderAvatar(profile, { sizeClass: 'w-16 h-16', rounded: 'rounded-2xl', textClass: 'text-xl' })}
         <div class="min-w-0">
           <h4 class="text-lg font-bold text-marea-black truncate">${escapeHtml(profile.full_name || 'Nome non specificato')}</h4>
           ${formatRoleCompany(profile)

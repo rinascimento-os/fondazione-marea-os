@@ -2,7 +2,7 @@ import { supabase } from '../supabase.js'
 import { escapeHtml } from '../utils/escape.js'
 import { renderModal, showModal, closeModal } from '../components/modal.js'
 import { showAlert, showConfirm } from '../utils/confirm-delete.js'
-import { escapeAttr, getInitials, urgencyBadge, urgencyLabel, withSubmitLock } from '../utils/helpers.js'
+import { escapeAttr, urgencyBadge, urgencyLabel, withSubmitLock, renderAvatar } from '../utils/helpers.js'
 
 let openNeeds = []
 let pionieri = []
@@ -134,7 +134,7 @@ async function loadMatches() {
   try {
     const { data } = await supabase
       .from('matches')
-      .select('*, pioniere:pionieri(id, full_name, email, location), need:project_needs(id, description, hours_needed, status, skill:skills(name), project:projects(id, name, status))')
+      .select('*, pioniere:pionieri(id, full_name, email, location, avatar_url), need:project_needs(id, description, hours_needed, status, skill:skills(name), project:projects(id, name, status))')
       .order('created_at', { ascending: false })
 
     allMatches = data || []
@@ -300,9 +300,7 @@ function renderPionieriList() {
     <div class="bg-white border-marea-teal/50 rounded-xl border p-5 cursor-pointer card-hover pioniere-match-card" data-pioniere-id="${escapeAttr(p.id)}">
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-3">
-          <div class="w-9 h-9 rounded-full bg-marea-teal/10 flex items-center justify-center flex-shrink-0">
-            <span class="text-marea-teal font-bold text-xs">${escapeHtml(getInitials(p.full_name))}</span>
-          </div>
+          ${renderAvatar(p, { sizeClass: 'w-9 h-9', textClass: 'text-xs' })}
           <div>
             <p class="font-semibold text-sm text-marea-black">${escapeHtml(p.full_name)}</p>
             ${!isAvailable ? (() => {
@@ -574,9 +572,7 @@ function renderMatchesList() {
   const renderMatchRow = (m) => `
     <div class="flex items-center justify-between gap-3 py-2.5 px-4 hover:bg-marea-cream/30 transition-colors">
       <div class="flex items-center gap-2.5 flex-1 min-w-0">
-        <div class="w-7 h-7 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-          <span class="text-marea-teal font-bold text-[10px]">${escapeHtml(getInitials(m.pioniere?.full_name))}</span>
-        </div>
+        ${renderAvatar(m.pioniere, { sizeClass: 'w-7 h-7', textClass: 'text-[10px]' })}
         <span class="font-semibold text-sm text-marea-black">${escapeHtml(m.pioniere?.full_name) || '—'}</span>
         ${m.notes ? `<button type="button" class="match-note-btn text-xs text-marea-gray hover:text-marea-black transition-colors flex-shrink-0" data-match-id="${escapeAttr(m.id)}">1 nota</button>` : ''}
       </div>
