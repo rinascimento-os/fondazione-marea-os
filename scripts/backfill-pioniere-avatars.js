@@ -12,7 +12,9 @@
 
 const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
 const { createClient } = require('@supabase/supabase-js')
+const PLACEHOLDER_HASHES = new Set(require('./placeholder-hashes'))
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -49,7 +51,7 @@ async function main() {
   const hasAvatar = new Set(existing.filter(r => r.avatar_url).map(r => r.id))
   const validId = new Set(existing.map(r => r.id))
 
-  let uploaded = 0, skipped = 0, missing = 0, failed = 0
+  let uploaded = 0, skipped = 0, missing = 0, failed = 0, placeholder = 0
   for (const { id, full_name, source_image } of mapping) {
     if (!validId.has(id)) {
       console.warn(`  ✗ ${full_name}: id ${id} no longer exists, skipping`)
@@ -67,6 +69,14 @@ async function main() {
       const contentType = (res.headers.get('content-type') || 'image/jpeg').split(';')[0].trim()
       const ext = EXT_BY_TYPE[contentType] || 'jpg'
       const buffer = Buffer.from(await res.arrayBuffer())
+
+      // Skip the site's "no photo" placeholder — leave avatar_url null so the
+      // app falls back to initials.
+      const hash = crypto.createHash('sha256').update(buffer).digest('hex')
+      if (PLACEHOLDER_HASHES.has(hash)) {
+        placeholder++
+        continue
+      }
       const objectPath = `${id}.${ext}`
 
       const { error: upErr } = await admin.storage
@@ -91,7 +101,7 @@ async function main() {
   }
 
   console.log(
-    `\nDone. uploaded=${uploaded} skipped(existing)=${skipped} missing-id=${missing} failed=${failed}`
+    `\nDone. uploaded=${uploaded} skipped(existing)=${skipped} placeholder=${placeholder} missing-id=${missing} failed=${failed}`
   )
 }
 
