@@ -3,14 +3,14 @@ import { setViewMode, defaultRouteFor } from '../role.js'
 export function renderViewSelect() {
   return `
     <div class="min-h-screen flex flex-col bg-marea-cream">
-      <div class="pt-6 pl-6">
-        <img src="/brand_assets/logo/Fondazione_Marea_Logo_MAIN_C.svg" alt="Fondazione Marea" class="h-8" />
+      <div class="pt-10 flex justify-center">
+        <img src="/brand_assets/logo/Rema_Logo_Wordmark_C.svg" alt="Rema — Fondazione Marea" class="h-9" />
       </div>
       <div class="flex-1 flex items-center justify-center p-4">
         <div class="w-full max-w-3xl">
           <div class="text-center mb-12">
-            <h1 class="font-heading text-5xl text-marea-black mb-4 leading-tight">Come vuoi accedere oggi?</h1>
-            <p class="text-marea-gray text-lg max-w-xl mx-auto">Hai accesso sia come amministratore che come Pioniere. Scegli quale vista usare.</p>
+            <h1 class="font-heading text-5xl text-marea-black mb-4 leading-tight">Seleziona la tua vista</h1>
+            <p class="text-marea-gray text-lg max-w-xl mx-auto">Hai accesso sia come amministratore che come Pioniere.</p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

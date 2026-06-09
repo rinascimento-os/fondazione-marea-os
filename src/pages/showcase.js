@@ -77,7 +77,7 @@ export function renderShowcase() {
       <!-- Header -->
       <header class="showcase-header">
         <div class="showcase-title-group">
-          <img src="/brand_assets/logo/Fondazione_Marea_Logo_H_W.svg" alt="Fondazione Marea" class="showcase-logo" />
+          <img src="/brand_assets/logo/Rema_Logo_H_W.svg" alt="Rema — Fondazione Marea" class="showcase-logo" />
         </div>
       </header>
 

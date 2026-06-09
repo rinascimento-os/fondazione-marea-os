@@ -1,7 +1,7 @@
 {
   "name": "fondazione-marea-os",
   "version": "1.0.0",
-  "description": "Piattaforma banca del tempo per Fondazione Marea",
+  "description": "Rema — piattaforma banca del tempo della Fondazione Marea",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
