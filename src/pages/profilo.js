@@ -277,7 +277,10 @@ function renderForm(feedback = '') {
         .select('*, pioniere_skills(skill_id, skill:skills(id, name, category))')
         .eq('id', pioniere.id)
         .single()
-      if (refreshed) pioniere = refreshed
+      if (refreshed) {
+        pioniere = refreshed
+        await signAvatars([pioniere]) // re-mint the signed URL so the photo keeps showing
+      }
       const normalizedLocation = normalizeCity(pioniere.location)
       if (normalizedLocation && !locationOptions.some(loc => loc.toLowerCase() === normalizedLocation.toLowerCase())) {
         locationOptions = [...locationOptions, normalizedLocation].sort((a, b) => a.localeCompare(b, 'it'))
