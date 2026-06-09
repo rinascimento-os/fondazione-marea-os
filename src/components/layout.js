@@ -45,7 +45,7 @@ function renderShowcaseCard(role) {
             <h3 class="text-white font-semibold text-sm leading-tight">Impatto della Rete</h3>
             <p class="text-white/75 text-xs mt-1 leading-relaxed">La mappa interattiva</p>
           </div>
-          <svg class="absolute bottom-4 right-4 w-4 h-4 text-white/70 group-hover:text-white group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          <svg class="absolute bottom-4 right-4 w-4 h-4 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
         </a>
       </div>
     </div>
