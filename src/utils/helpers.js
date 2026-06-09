@@ -1,8 +1,33 @@
 import { escapeHtml } from './escape.js'
+import { safeUrl } from './url.js'
 
 export function getInitials(name) {
   if (!name) return '?'
-  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return '?'
+  if (words.length === 1) return words[0][0].toUpperCase()
+  // First + last name (skip any middle names), e.g. "Andrea Riccardo Virdi" → "AV"
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase()
+}
+
+/**
+ * Render a pioniere avatar: their photo if `avatar_url` is set, otherwise an
+ * initials placeholder. The two branches share size/shape classes so the
+ * layout is identical whether or not a photo exists.
+ */
+export function renderAvatar(pioniere, { sizeClass = 'w-11 h-11', rounded = 'rounded-full', textClass = 'text-sm', extraClass = '', initialsId = '' } = {}) {
+  const name = pioniere?.full_name || ''
+  // `avatarUrl` is the signed display URL minted by signAvatars(); `avatar_url`
+  // is the raw private-bucket path and is not directly usable in <img>.
+  const url = safeUrl(pioniere?.avatarUrl)
+  if (url) {
+    return `<img src="${escapeAttr(url)}" alt="${escapeAttr(name)}" loading="lazy"
+      class="${sizeClass} ${rounded} ${extraClass} object-cover flex-shrink-0 bg-marea-teal-light" />`
+  }
+  return `
+    <div class="${sizeClass} ${rounded} ${extraClass} bg-marea-teal-light flex items-center justify-center flex-shrink-0">
+      <span ${initialsId ? `id="${escapeAttr(initialsId)}"` : ''} class="text-marea-teal font-bold ${textClass}">${escapeHtml(getInitials(name))}</span>
+    </div>`
 }
 
 export function urgencyBadge(u) {

@@ -11,3 +11,6 @@ brand_assets/main_website/
 # Local Netlify folder
 .netlify
 deno.lock
+
+# Local one-off scripts
+scripts/

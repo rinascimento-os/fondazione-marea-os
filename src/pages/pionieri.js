@@ -5,10 +5,11 @@ import { renderSkillPicker, initSkillPicker, loadSkills } from '../components/sk
 import { renderSearchableSelect, initSearchableSelect } from '../components/searchable-select.js'
 import { openCsvImport } from '../components/csv-import.js'
 import { initDeleteConfirm, showAlert } from '../utils/confirm-delete.js'
-import { escapeAttr, getInitials, withSubmitLock } from '../utils/helpers.js'
+import { escapeAttr, withSubmitLock, renderAvatar } from '../utils/helpers.js'
 import { getRole } from '../role.js'
 import { renderAvailabilitySelect } from '../utils/availability.js'
 import { safeUrl } from '../utils/url.js'
+import { signAvatars } from '../utils/avatar.js'
 import { createIcons, ChevronLeft, ChevronRight, Search, X } from 'lucide'
 
 let allPionieri = []
@@ -130,7 +131,7 @@ export function renderPionieri() {
     <div class="shrink-0 w-[20rem] sm:w-[22rem] snap-start">
       <div class="h-[14.75rem] rounded-lg border border-marea-border bg-white p-4 shadow-sm">
         <div class="flex items-start gap-3">
-          <div class="h-11 w-11 flex-shrink-0 rounded-full bg-marea-light"></div>
+          <div class="h-11 w-11 flex-shrink-0 rounded-xl bg-marea-light"></div>
           <div class="min-w-0 flex-1 space-y-2 pt-1">
             <div class="h-4 w-36 rounded bg-marea-warm-gray"></div>
             <div class="h-3 w-28 rounded bg-marea-warm-gray"></div>
@@ -347,6 +348,7 @@ async function loadPionieri({ render = true } = {}) {
 
     if (error) throw error
     allPionieri = data || []
+    await signAvatars(allPionieri)
   } catch (err) {
     console.error('Errore nel caricamento Pionieri:', err)
     allPionieri = []
@@ -358,9 +360,7 @@ function renderCard(p, { matchHint } = {}) {
   return `
     <div class="bg-white rounded-2xl border border-marea-border/60 p-6 card-hover cursor-pointer pioniere-card break-inside-avoid" data-id="${escapeAttr(p.id)}">
       <div class="flex items-start gap-4">
-        <div class="w-11 h-11 rounded-full bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-          <span class="text-marea-teal font-bold text-sm">${escapeHtml(getInitials(p.full_name))}</span>
-        </div>
+        ${renderAvatar(p, { sizeClass: 'w-11 h-11', rounded: 'rounded-xl', textClass: 'text-sm' })}
         <div class="flex-1 min-w-0">
           <h3 class="font-semibold text-marea-black text-base">${escapeHtml(p.full_name)}</h3>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-marea-gray">
@@ -410,9 +410,7 @@ function renderMatchCard(p, anchor) {
   return `
     <div class="group relative flex h-[14.75rem] cursor-pointer flex-col overflow-hidden rounded-lg border border-marea-border bg-white p-4 pb-14 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md pioniere-card" data-id="${escapeAttr(p.id)}">
       <div class="flex items-start gap-3">
-        <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-marea-teal-light ring-1 ring-marea-teal/10">
-          <span class="text-sm font-bold text-marea-teal">${escapeHtml(getInitials(p.full_name))}</span>
-        </div>
+        ${renderAvatar(p, { sizeClass: 'h-11 w-11', rounded: 'rounded-xl', textClass: 'text-sm', extraClass: 'ring-1 ring-marea-teal/10' })}
         <div class="min-w-0 flex-1">
           <p class="line-clamp-2 text-base font-semibold leading-snug text-marea-black">${escapeHtml(p.full_name)}</p>
           ${p.company ? `
@@ -572,9 +570,7 @@ function openPioniereDetail(pioniere) {
     <div class="space-y-5">
       <!-- Identity -->
       <div class="flex items-center gap-4">
-        <div class="w-16 h-16 rounded-2xl bg-marea-teal-light flex items-center justify-center flex-shrink-0">
-          <span class="text-marea-teal font-bold text-xl">${escapeHtml(getInitials(pioniere.full_name))}</span>
-        </div>
+        ${renderAvatar(pioniere, { sizeClass: 'w-16 h-16', rounded: 'rounded-2xl', textClass: 'text-xl' })}
         <div class="flex-1 min-w-0">
           <h3 class="text-xl font-bold text-marea-black">${escapeHtml(pioniere.full_name)}</h3>
           ${pioniere.role || pioniere.company ? `<p class="text-sm text-marea-gray mt-0.5">${[pioniere.role, pioniere.company].filter(Boolean).map(v => escapeHtml(v)).join(' · ')}</p>` : ''}
