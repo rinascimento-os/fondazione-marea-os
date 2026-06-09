@@ -31,11 +31,15 @@ function renderBootLoader() {
 // instead of silently jumping it into the app too.
 function renderLoggedInElsewhere() {
   return `
-    <div class="min-h-screen flex flex-col items-center justify-center bg-marea-cream p-4 text-center">
-      <img src="/brand_assets/logo/Rema_Logo_Wordmark_C.svg" alt="Rema" class="h-9 mb-12" />
-      <svg class="h-16 w-16 text-marea-teal mb-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
-      <h1 class="font-heading text-4xl text-marea-black mb-3">Accesso effettuato</h1>
-      <p class="text-marea-gray text-lg max-w-md mx-auto">Hai effettuato l'accesso in un'altra scheda. Ora puoi chiudere questa scheda.</p>
+    <div class="min-h-screen flex flex-col bg-marea-cream">
+      <div class="pt-10 flex justify-center">
+        <img src="/brand_assets/logo/Rema_Logo_Wordmark_C.svg" alt="Rema" class="h-9" />
+      </div>
+      <div class="flex-1 flex flex-col items-center justify-center p-4 text-center">
+        <svg class="h-16 w-16 text-marea-teal mb-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+        <h1 class="font-heading text-4xl text-marea-black mb-3">Accesso effettuato</h1>
+        <p class="text-marea-gray text-lg max-w-md mx-auto">Hai effettuato l'accesso in un'altra scheda. Ora puoi chiudere questa scheda.</p>
+      </div>
     </div>
   `
 }
