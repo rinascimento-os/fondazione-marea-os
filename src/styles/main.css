@@ -233,7 +233,6 @@ select {
 .nav-active {
   background: rgba(245, 197, 66, 0.15);
   color: var(--color-marea-yellow);
-  border-left: 3px solid var(--color-marea-yellow);
 }
 
 /* Badge base */
@@ -364,12 +363,9 @@ select.focus-ring {
   z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1rem;
-  padding: 1rem 2.5rem;
-  background: rgba(16, 32, 48, 0.7);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 1.5rem 2.5rem 0.5rem;
 }
 
 .showcase-back-btn {
@@ -398,7 +394,7 @@ select.focus-ring {
 }
 
 .showcase-logo {
-  height: 1.05rem;
+  height: 1.15rem;
   opacity: 0.9;
 }
 

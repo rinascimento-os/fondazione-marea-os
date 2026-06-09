@@ -26,6 +26,24 @@ function renderBootLoader() {
   `
 }
 
+// Shown in the original login tab once the user completes sign-in in another
+// tab (the magic link opens a fresh tab). Keeps this tab on a calm end state
+// instead of silently jumping it into the app too.
+function renderLoggedInElsewhere() {
+  return `
+    <div class="min-h-screen flex flex-col bg-marea-cream">
+      <div class="pt-10 flex justify-center">
+        <img src="/brand_assets/logo/Rema_Logo_Wordmark_C.svg" alt="Rema" class="h-9" />
+      </div>
+      <div class="flex-1 flex flex-col items-center justify-center p-4 text-center">
+        <svg class="h-16 w-16 text-marea-teal mb-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+        <h1 class="font-heading text-4xl text-marea-black mb-3">Accesso effettuato</h1>
+        <p class="text-marea-gray text-lg max-w-md mx-auto">Hai effettuato l'accesso in un'altra scheda. Ora puoi chiudere questa scheda.</p>
+      </div>
+    </div>
+  `
+}
+
 // Resolve the initial auth state reliably, even in fresh tabs (e.g. when a
 // hash-routed link is opened with target="_blank"). supabase.auth.getSession()
 // can return null before the client has finished hydrating from localStorage;
@@ -63,6 +81,10 @@ const routes = {
 }
 
 let currentSession = null
+// True only in the tab that actually processed the magic-link token. Lets us
+// tell apart "I just logged in here" from "another tab logged in" (cross-tab
+// session broadcast), so a waiting login tab doesn't get yanked into the app.
+let processedAuthInThisTab = false
 
 function isPublicHash(hash) {
   return Object.keys(routes).some(key => hash.startsWith(key) && routes[key].public)
@@ -176,6 +198,7 @@ async function init() {
       )
       if (data?.session) {
         currentSession = data.session
+        processedAuthInThisTab = true
         // Splash always shows on fresh login for dual-role users
         clearViewMode()
         await resolveRole(currentSession)
@@ -207,6 +230,16 @@ async function init() {
     )
     if (event === 'SIGNED_IN' && wasSignedIn && sameUser) {
       currentSession = session
+      return
+    }
+    // Cross-tab sign-in: this tab is still on the login screen waiting for the
+    // magic link, but the user opened the link in a different (fresh) tab.
+    // Don't pull this tab into the app; show a calm "you're in, close this" end
+    // state instead.
+    if (event === 'SIGNED_IN' && !wasSignedIn && !processedAuthInThisTab && window.location.hash === '#/login') {
+      currentSession = session
+      await resolveRole(session)
+      app.innerHTML = renderLoggedInElsewhere()
       return
     }
     currentSession = session

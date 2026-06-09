@@ -3,14 +3,14 @@ import { signInWithOtp } from '../auth.js'
 export function renderLogin() {
   return `
     <div class="min-h-screen flex flex-col bg-marea-cream">
-      <div class="pt-6 pl-6">
-        <img src="/brand_assets/logo/Fondazione_Marea_Logo_MAIN_C.svg" alt="Fondazione Marea" class="h-8" />
+      <div class="pt-10 flex justify-center">
+        <img src="/brand_assets/logo/Rema_Logo_Wordmark_C.svg" alt="Rema — Fondazione Marea" class="h-9" />
       </div>
-      <div class="flex-1 flex items-center justify-center p-4 -mt-16">
+      <div class="flex-1 flex items-center justify-center p-4">
       <div class="w-full max-w-lg">
         <div class="text-center mb-12">
-          <h1 class="font-heading text-5xl text-marea-black mb-4 leading-tight">Banca del Tempo</h1>
-          <p class="text-marea-gray text-lg max-w-sm mx-auto">La piattaforma di matching tra Pionieri e progetti della Fondazione</p>
+          <h1 class="font-heading text-5xl text-marea-black mb-4 leading-tight">Accedi</h1>
+          <p class="text-marea-gray text-lg max-w-sm mx-auto">alla piattaforma di matching tra Pionieri e progetti della Fondazione</p>
         </div>
 
         <div class="bg-white rounded-2xl shadow-lg border border-marea-border/60 p-10">
