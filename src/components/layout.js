@@ -20,7 +20,17 @@ const PIONIERE_NAV_ITEMS = [
 function renderShowcaseCard(role) {
   const isAdmin = role?.viewMode === 'admin'
   return `
-    <div class="px-3 pb-3">
+    <div class="px-3 pb-6">
+      ${isAdmin ? `
+        <div class="flex items-center justify-between gap-2 mb-2 px-1">
+          <span id="sidebar-refresh-status" class="text-[11px] text-white/50 leading-tight truncate"></span>
+          <button id="sidebar-refresh-showcase" type="button"
+                  class="flex items-center gap-1.5 shrink-0 text-xs font-medium text-white/55 hover:text-white transition-colors">
+            <svg id="sidebar-refresh-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Aggiorna
+          </button>
+        </div>
+      ` : ''}
       <div class="rounded-xl overflow-hidden relative"
            style="background: linear-gradient(135deg, var(--color-marea-teal) 0%, var(--color-marea-dark) 100%);">
         <div class="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
@@ -30,23 +40,13 @@ function renderShowcaseCard(role) {
             <div class="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
               <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
-            <svg class="w-4 h-4 text-white/70 group-hover:text-white group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </div>
           <div class="relative">
             <h3 class="text-white font-semibold text-sm leading-tight">Impatto della Rete</h3>
             <p class="text-white/75 text-xs mt-1 leading-relaxed">La mappa interattiva</p>
           </div>
+          <svg class="absolute bottom-4 right-4 w-4 h-4 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
         </a>
-        ${isAdmin ? `
-          <div class="relative px-4 pb-3 pt-1 border-t border-white/10 mt-1">
-            <button id="sidebar-refresh-showcase"
-                    class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/85 hover:text-white text-xs font-medium transition-all">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              <span id="sidebar-refresh-label">Aggiorna</span>
-            </button>
-            <p id="sidebar-refresh-status" class="text-[10px] text-white/55 mt-1.5 leading-tight min-h-[1em]"></p>
-          </div>
-        ` : ''}
       </div>
     </div>
   `
@@ -102,9 +102,8 @@ export function renderLayout(contentHtml, currentHash) {
       <!-- Sidebar -->
       <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-marea-navy text-white flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
         <!-- Logo area -->
-        <div class="px-6 py-6 border-b border-white/10">
-          <img src="/brand_assets/logo/Fondazione_Marea_Logo_H_W.svg" alt="Fondazione Marea" class="h-8" />
-          <p class="text-xs text-white/60 mt-2 tracking-wide uppercase">Banca del Tempo</p>
+        <div class="px-6 py-5 border-b border-white/10">
+          <img src="/brand_assets/logo/Rema_Logo_H_W.svg" alt="Rema — Fondazione Marea" class="h-10" />
         </div>
 
         <!-- Navigation -->
@@ -212,13 +211,13 @@ export function initLayoutListeners() {
 
   const refreshBtn = document.getElementById('sidebar-refresh-showcase')
   if (refreshBtn) {
-    const labelEl = document.getElementById('sidebar-refresh-label')
+    const iconEl = document.getElementById('sidebar-refresh-icon')
     const statusEl = document.getElementById('sidebar-refresh-status')
     refreshBtn.addEventListener('click', async () => {
       refreshBtn.disabled = true
       refreshBtn.classList.add('opacity-60', 'cursor-wait')
-      if (labelEl) labelEl.textContent = 'Aggiornamento…'
-      if (statusEl) statusEl.textContent = ''
+      if (iconEl) iconEl.classList.add('animate-spin')
+      if (statusEl) statusEl.textContent = 'Aggiornamento…'
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) throw new Error('Sessione scaduta')
@@ -234,14 +233,13 @@ export function initLayoutListeners() {
         const hh = String(now.getHours()).padStart(2, '0')
         const mm = String(now.getMinutes()).padStart(2, '0')
         if (statusEl) statusEl.textContent = `Aggiornato alle ${hh}:${mm}`
-        if (labelEl) labelEl.textContent = 'Aggiorna'
       } catch (e) {
         console.error('[layout] showcase refresh failed:', e)
         if (statusEl) statusEl.textContent = `Errore: ${e.message}`
-        if (labelEl) labelEl.textContent = 'Aggiorna'
       } finally {
         refreshBtn.disabled = false
         refreshBtn.classList.remove('opacity-60', 'cursor-wait')
+        if (iconEl) iconEl.classList.remove('animate-spin')
       }
     })
   }
